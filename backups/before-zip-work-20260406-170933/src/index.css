@@ -1,0 +1,204 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --office-bg-rgb: 26 26 46;
+  --office-sidebar-rgb: 22 33 62;
+  --office-panel-rgb: 15 52 96;
+  --office-border-rgb: 35 68 117;
+  --office-text-rgb: 168 178 216;
+  --office-active-rgb: 100 255 218;
+  --office-accent-rgb: 233 69 96;
+  --office-contrast-rgb: 10 16 28;
+}
+
+:root[data-theme='light'] {
+  --office-bg-rgb: 242 246 252;
+  --office-sidebar-rgb: 252 253 255;
+  --office-panel-rgb: 223 231 244;
+  --office-border-rgb: 180 195 221;
+  --office-text-rgb: 45 58 84;
+  --office-active-rgb: 22 163 137;
+  --office-accent-rgb: 224 72 93;
+  --office-contrast-rgb: 14 23 38;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: rgb(var(--office-bg-rgb));
+  color: rgb(var(--office-text-rgb));
+  font-family: 'Segoe UI', sans-serif;
+  overflow: hidden;
+}
+
+#root {
+  height: 100vh;
+}
+
+.bg-office-bg {
+  background-color: rgb(var(--office-bg-rgb)) !important;
+}
+
+.bg-office-sidebar {
+  background-color: rgb(var(--office-sidebar-rgb)) !important;
+}
+
+.bg-office-panel {
+  background-color: rgb(var(--office-panel-rgb)) !important;
+}
+
+.bg-office-panel\/30 {
+  background-color: rgb(var(--office-panel-rgb) / 0.3) !important;
+}
+
+.bg-office-panel\/40 {
+  background-color: rgb(var(--office-panel-rgb) / 0.4) !important;
+}
+
+.bg-office-panel\/50 {
+  background-color: rgb(var(--office-panel-rgb) / 0.5) !important;
+}
+
+.bg-office-panel\/60 {
+  background-color: rgb(var(--office-panel-rgb) / 0.6) !important;
+}
+
+.bg-office-panel\/80 {
+  background-color: rgb(var(--office-panel-rgb) / 0.8) !important;
+}
+
+.bg-office-active {
+  background-color: rgb(var(--office-active-rgb)) !important;
+}
+
+.bg-office-active\/20 {
+  background-color: rgb(var(--office-active-rgb) / 0.2) !important;
+}
+
+.bg-office-active\/30 {
+  background-color: rgb(var(--office-active-rgb) / 0.3) !important;
+}
+
+.bg-office-accent {
+  background-color: rgb(var(--office-accent-rgb)) !important;
+}
+
+.text-office-bg {
+  color: rgb(var(--office-contrast-rgb)) !important;
+}
+
+.text-office-text {
+  color: rgb(var(--office-text-rgb)) !important;
+}
+
+.text-office-text\/30 {
+  color: rgb(var(--office-text-rgb) / 0.3) !important;
+}
+
+.text-office-text\/40 {
+  color: rgb(var(--office-text-rgb) / 0.4) !important;
+}
+
+.text-office-text\/50 {
+  color: rgb(var(--office-text-rgb) / 0.5) !important;
+}
+
+.text-office-text\/60 {
+  color: rgb(var(--office-text-rgb) / 0.6) !important;
+}
+
+.text-office-text\/70 {
+  color: rgb(var(--office-text-rgb) / 0.7) !important;
+}
+
+.text-office-active {
+  color: rgb(var(--office-active-rgb)) !important;
+}
+
+.text-office-active\/70 {
+  color: rgb(var(--office-active-rgb) / 0.7) !important;
+}
+
+.border-office-panel {
+  border-color: rgb(var(--office-border-rgb)) !important;
+}
+
+.border-office-panel\/50 {
+  border-color: rgb(var(--office-border-rgb) / 0.5) !important;
+}
+
+.border-office-panel\/60 {
+  border-color: rgb(var(--office-border-rgb) / 0.6) !important;
+}
+
+.border-office-panel\/70 {
+  border-color: rgb(var(--office-border-rgb) / 0.7) !important;
+}
+
+.border-office-active {
+  border-color: rgb(var(--office-active-rgb)) !important;
+}
+
+.border-office-active\/30 {
+  border-color: rgb(var(--office-active-rgb) / 0.3) !important;
+}
+
+.border-office-active\/60 {
+  border-color: rgb(var(--office-active-rgb) / 0.6) !important;
+}
+
+.placeholder-office-text\/40::placeholder {
+  color: rgb(var(--office-text-rgb) / 0.4) !important;
+}
+
+.hover\:bg-office-panel\/50:hover {
+  background-color: rgb(var(--office-panel-rgb) / 0.5) !important;
+}
+
+.hover\:bg-office-panel\/60:hover {
+  background-color: rgb(var(--office-panel-rgb) / 0.6) !important;
+}
+
+.hover\:bg-office-panel\/80:hover {
+  background-color: rgb(var(--office-panel-rgb) / 0.8) !important;
+}
+
+.hover\:border-office-active:hover {
+  border-color: rgb(var(--office-active-rgb)) !important;
+}
+
+.focus\:border-office-active:focus {
+  border-color: rgb(var(--office-active-rgb)) !important;
+}
+
+:root[data-theme='light'] .text-white {
+  color: rgb(var(--office-contrast-rgb)) !important;
+}
+
+:root[data-theme='light'] .hover\:text-white:hover {
+  color: rgb(var(--office-contrast-rgb)) !important;
+}
+
+/* 픽셀 아트 렌더링 */
+canvas, img.pixel {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+/* 스크롤바 스타일 */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: #16213e;
+}
+::-webkit-scrollbar-thumb {
+  background: #0f3460;
+  border-radius: 2px;
+}

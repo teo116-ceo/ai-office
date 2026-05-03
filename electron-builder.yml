@@ -1,0 +1,39 @@
+appId: com.teoverselab.ai-office
+productName: AI 오피스
+copyright: Copyright © 2026 TEoVerse. All rights reserved.
+
+directories:
+  output: release
+
+files:
+  - dist/**
+  - dist-electron/**
+  - package.json
+
+asarUnpack:
+  - dist-electron/server.cjs
+  - dist/**
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: AI 오피스
+  installerSidebar: build/installer-sidebar.bmp
+  uninstallerSidebar: build/installer-sidebar.bmp
+  license: build/license.html
+
+win:
+  icon: public/icon.ico
+  target:
+    - target: nsis
+      arch:
+        - x64
+
+# GitHub Releases 자동 업데이트 설정
+# owner와 repo를 본인 GitHub 저장소로 변경하세요
+publish:
+  - provider: github
+    owner: teo116-ceo
+    repo: ai-office

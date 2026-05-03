@@ -1,0 +1,24 @@
+
+> ai-office@0.1.0 dev
+> concurrently -n server,vite -c blue,green "npm run server" "vite"
+
+[server] 
+[server] > ai-office@0.1.0 server
+[server] > tsx watch server/index.ts
+[server] 
+[vite] Port 5173 is in use, trying another one...
+[vite] 
+[vite]   [32m[1mVITE[22m v6.4.1[39m  [2mready in [0m[1m518[22m[2m[0m ms[22m
+[vite] 
+[vite]   [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5174[22m/[39m
+[vite] [2m  [32m➜[39m  [1mNetwork[22m[2m: use [22m[1m--host[22m[2m to expose[22m
+[server] [AI 오피스 서버] http://localhost:3001
+[vite] [2m오후 7:10:48[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2msrc/components/office/FloorShells.tsx[22m
+[vite] [2m오후 7:10:51[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2mdist/index.html[22m
+[vite] [2m오후 7:11:06[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2mdist/index.html[22m
+[vite] [2m오후 7:13:44[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/index.css, /src/components/office/FloorNav.tsx, /src/components/layout/Sidebar.tsx, /src/components/office/OfficeCanvas.tsx, /src/components/ui/ToastContainer.tsx, /src/components/layout/Header.tsx, /src/components/layout/CommunicationPanel.tsx, /src/components/layout/MobileTaskInputBar.tsx[22m
+[vite] [2m오후 7:13:51[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2msrc/components/office/EditorOverlay.tsx[22m
+[vite] [2m오후 7:13:55[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2mdist/index.html[22m
+[vite] [2m오후 7:14:07[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mhmr update [39m[2m/src/App.tsx, /src/index.css, /src/components/office/FloorNav.tsx, /src/components/layout/Sidebar.tsx, /src/components/office/OfficeCanvas.tsx, /src/components/ui/ToastContainer.tsx, /src/components/layout/Header.tsx, /src/components/layout/CommunicationPanel.tsx, /src/components/layout/MobileTaskInputBar.tsx[22m
+[vite] [2m오후 7:14:26[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2mdist/index.html[22m
+[vite] [2m오후 7:24:13[22m [36m[1m[vite][22m[39m [90m[2m(client)[22m[39m [32mpage reload [39m[2msrc/components/office/AgentMeshes.tsx[22m

@@ -1,0 +1,1804 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --office-bg-rgb: 26 26 46;
+  --office-sidebar-rgb: 22 33 62;
+  --office-panel-rgb: 15 52 96;
+  --office-border-rgb: 35 68 117;
+  --office-text-rgb: 168 178 216;
+  --office-active-rgb: 100 255 218;
+  --office-accent-rgb: 233 69 96;
+  --office-contrast-rgb: 10 16 28;
+}
+
+:root[data-theme='light'] {
+  --office-bg-rgb: 241 245 249;         /* slate-100 — 페이지 배경 */
+  --office-sidebar-rgb: 255 255 255;    /* white — 사이드바·카드 */
+  --office-panel-rgb: 239 246 255;      /* blue-50 — 내부 패널·입력창 */
+  --office-border-rgb: 203 213 225;     /* slate-300 — 테두리 */
+  --office-text-rgb: 71 85 105;         /* slate-600 — 보조 텍스트 */
+  --office-surface-text-rgb: 15 23 42;  /* slate-900 — 카드 위 본문 텍스트 */
+  --office-active-rgb: 59 130 246;      /* #3B82F6 — 포인트 컬러 */
+  --office-accent-rgb: 234 88 12;       /* orange-600 — 알림 뱃지 */
+  --office-contrast-rgb: 15 23 42;      /* slate-900 — text-white 오버라이드 */
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+body {
+  background-color: rgb(var(--office-bg-rgb));
+  color: rgb(var(--office-text-rgb));
+  font-family: 'Segoe UI', sans-serif;
+  overflow: hidden;
+}
+
+.bg-office-bg {
+  background-color: rgb(var(--office-bg-rgb)) !important;
+}
+
+.bg-office-sidebar {
+  background-color: rgb(var(--office-sidebar-rgb)) !important;
+}
+
+.bg-office-panel {
+  background-color: rgb(var(--office-panel-rgb)) !important;
+}
+
+.bg-office-panel\/30 {
+  background-color: rgb(var(--office-panel-rgb) / 0.3) !important;
+}
+
+.bg-office-panel\/40 {
+  background-color: rgb(var(--office-panel-rgb) / 0.4) !important;
+}
+
+.bg-office-panel\/50 {
+  background-color: rgb(var(--office-panel-rgb) / 0.5) !important;
+}
+
+.bg-office-panel\/60 {
+  background-color: rgb(var(--office-panel-rgb) / 0.6) !important;
+}
+
+.bg-office-panel\/80 {
+  background-color: rgb(var(--office-panel-rgb) / 0.8) !important;
+}
+
+.bg-office-panel\/90 {
+  background-color: rgb(var(--office-panel-rgb) / 0.9) !important;
+}
+
+.bg-office-active {
+  background-color: rgb(var(--office-active-rgb)) !important;
+}
+
+.bg-office-active\/5 {
+  background-color: rgb(var(--office-active-rgb) / 0.05) !important;
+}
+
+.bg-office-active\/10 {
+  background-color: rgb(var(--office-active-rgb) / 0.1) !important;
+}
+
+.bg-office-active\/15 {
+  background-color: rgb(var(--office-active-rgb) / 0.15) !important;
+}
+
+.bg-office-active\/20 {
+  background-color: rgb(var(--office-active-rgb) / 0.2) !important;
+}
+
+.bg-office-active\/25 {
+  background-color: rgb(var(--office-active-rgb) / 0.25) !important;
+}
+
+.bg-office-active\/30 {
+  background-color: rgb(var(--office-active-rgb) / 0.3) !important;
+}
+
+.bg-office-active\/40 {
+  background-color: rgb(var(--office-active-rgb) / 0.4) !important;
+}
+
+.bg-office-active\/50 {
+  background-color: rgb(var(--office-active-rgb) / 0.5) !important;
+}
+
+.bg-office-active\/80 {
+  background-color: rgb(var(--office-active-rgb) / 0.8) !important;
+}
+
+.bg-office-accent {
+  background-color: rgb(var(--office-accent-rgb)) !important;
+}
+
+.bg-office-bg\/20 {
+  background-color: rgb(var(--office-bg-rgb) / 0.2) !important;
+}
+
+.bg-office-bg\/40 {
+  background-color: rgb(var(--office-bg-rgb) / 0.4) !important;
+}
+
+.bg-office-bg\/50 {
+  background-color: rgb(var(--office-bg-rgb) / 0.5) !important;
+}
+
+.bg-office-sidebar\/90 {
+  background-color: rgb(var(--office-sidebar-rgb) / 0.9) !important;
+}
+
+.text-office-bg {
+  color: rgb(var(--office-contrast-rgb)) !important;
+}
+
+.text-office-text {
+  color: rgb(var(--office-text-rgb)) !important;
+}
+
+.text-office-text\/30 {
+  color: rgb(var(--office-text-rgb) / 0.3) !important;
+}
+
+.text-office-text\/40 {
+  color: rgb(var(--office-text-rgb) / 0.4) !important;
+}
+
+.text-office-text\/50 {
+  color: rgb(var(--office-text-rgb) / 0.5) !important;
+}
+
+.text-office-text\/60 {
+  color: rgb(var(--office-text-rgb) / 0.6) !important;
+}
+
+.text-office-text\/70 {
+  color: rgb(var(--office-text-rgb) / 0.7) !important;
+}
+
+.text-office-active {
+  color: rgb(var(--office-active-rgb)) !important;
+}
+
+.text-office-active\/60 {
+  color: rgb(var(--office-active-rgb) / 0.6) !important;
+}
+
+.text-office-active\/70 {
+  color: rgb(var(--office-active-rgb) / 0.7) !important;
+}
+
+.text-office-active\/80 {
+  color: rgb(var(--office-active-rgb) / 0.8) !important;
+}
+
+.border-office-panel {
+  border-color: rgb(var(--office-border-rgb)) !important;
+}
+
+.border-office-panel\/50 {
+  border-color: rgb(var(--office-border-rgb) / 0.5) !important;
+}
+
+.border-office-panel\/60 {
+  border-color: rgb(var(--office-border-rgb) / 0.6) !important;
+}
+
+.border-office-panel\/70 {
+  border-color: rgb(var(--office-border-rgb) / 0.7) !important;
+}
+
+.border-office-active {
+  border-color: rgb(var(--office-active-rgb)) !important;
+}
+
+.border-office-active\/30 {
+  border-color: rgb(var(--office-active-rgb) / 0.3) !important;
+}
+
+.border-office-active\/40 {
+  border-color: rgb(var(--office-active-rgb) / 0.4) !important;
+}
+
+.border-office-active\/50 {
+  border-color: rgb(var(--office-active-rgb) / 0.5) !important;
+}
+
+.border-office-active\/60 {
+  border-color: rgb(var(--office-active-rgb) / 0.6) !important;
+}
+
+.ring-office-active {
+  --tw-ring-color: rgb(var(--office-active-rgb)) !important;
+}
+
+.accent-office-active {
+  accent-color: rgb(var(--office-active-rgb)) !important;
+}
+
+.placeholder-office-text\/40::placeholder {
+  color: rgb(var(--office-text-rgb) / 0.4) !important;
+}
+
+.hover\:bg-office-panel\/50:hover {
+  background-color: rgb(var(--office-panel-rgb) / 0.5) !important;
+}
+
+.hover\:bg-office-panel\/60:hover {
+  background-color: rgb(var(--office-panel-rgb) / 0.6) !important;
+}
+
+.hover\:bg-office-panel\/80:hover {
+  background-color: rgb(var(--office-panel-rgb) / 0.8) !important;
+}
+
+.hover\:bg-office-active\/20:hover {
+  background-color: rgb(var(--office-active-rgb) / 0.2) !important;
+}
+
+.hover\:bg-office-active\/30:hover {
+  background-color: rgb(var(--office-active-rgb) / 0.3) !important;
+}
+
+.hover\:bg-office-active\/40:hover {
+  background-color: rgb(var(--office-active-rgb) / 0.4) !important;
+}
+
+.hover\:border-office-active:hover {
+  border-color: rgb(var(--office-active-rgb)) !important;
+}
+
+.hover\:border-office-active\/50:hover {
+  border-color: rgb(var(--office-active-rgb) / 0.5) !important;
+}
+
+.focus\:border-office-active:focus {
+  border-color: rgb(var(--office-active-rgb)) !important;
+}
+
+.focus\:border-office-active\/60:focus {
+  border-color: rgb(var(--office-active-rgb) / 0.6) !important;
+}
+
+.hover\:text-office-active:hover {
+  color: rgb(var(--office-active-rgb)) !important;
+}
+
+:root[data-theme='light'] .text-white {
+  color: rgb(var(--office-contrast-rgb)) !important;
+}
+
+:root[data-theme='light'] .hover\:text-white:hover {
+  color: rgb(var(--office-contrast-rgb)) !important;
+}
+
+:root[data-theme='light'] .bg-office-sidebar,
+:root[data-theme='light'] .bg-office-panel {
+  --office-text-rgb: var(--office-surface-text-rgb);
+  box-shadow: 0 1px 3px rgb(15 23 42 / 0.08), 0 1px 2px rgb(15 23 42 / 0.04);
+}
+
+:root[data-theme='light'] .bg-office-panel,
+:root[data-theme='light'] .bg-office-panel\/30,
+:root[data-theme='light'] .bg-office-panel\/40,
+:root[data-theme='light'] .bg-office-panel\/50,
+:root[data-theme='light'] .bg-office-panel\/60,
+:root[data-theme='light'] .bg-office-panel\/80,
+:root[data-theme='light'] .bg-office-panel\/90 {
+  --office-text-rgb: var(--office-surface-text-rgb);
+  color: rgb(var(--office-text-rgb));
+}
+
+:root[data-theme='light'] .bg-office-sidebar .text-white,
+:root[data-theme='light'] .bg-office-panel .text-white,
+:root[data-theme='light'] .bg-office-panel\/30 .text-white,
+:root[data-theme='light'] .bg-office-panel\/40 .text-white,
+:root[data-theme='light'] .bg-office-panel\/50 .text-white,
+:root[data-theme='light'] .bg-office-panel\/60 .text-white,
+:root[data-theme='light'] .bg-office-panel\/80 .text-white,
+:root[data-theme='light'] .bg-office-panel\/90 .text-white {
+  color: rgb(var(--office-surface-text-rgb)) !important;
+}
+
+:root[data-theme='light'] .bg-office-sidebar .hover\:text-white:hover,
+:root[data-theme='light'] .bg-office-panel .hover\:text-white:hover,
+:root[data-theme='light'] .bg-office-panel\/30 .hover\:text-white:hover,
+:root[data-theme='light'] .bg-office-panel\/40 .hover\:text-white:hover,
+:root[data-theme='light'] .bg-office-panel\/50 .hover\:text-white:hover,
+:root[data-theme='light'] .bg-office-panel\/60 .hover\:text-white:hover,
+:root[data-theme='light'] .bg-office-panel\/80 .hover\:text-white:hover,
+:root[data-theme='light'] .bg-office-panel\/90 .hover\:text-white:hover {
+  color: rgb(var(--office-active-rgb)) !important;
+}
+
+/* ── 라이트 테마 · Tailwind 고정 색상 전체 보정 ──────────────────── */
+
+/* 버튼·링크에 card shadow 방지 */
+:root[data-theme='light'] button.bg-office-panel,
+:root[data-theme='light'] button.bg-office-sidebar,
+:root[data-theme='light'] a.bg-office-panel,
+:root[data-theme='light'] a.bg-office-sidebar {
+  box-shadow: none !important;
+}
+
+/* 옐로/앰버 (승인 대기, 태그) */
+:root[data-theme='light'] .text-yellow-100 { color: #78350F !important; }
+:root[data-theme='light'] .text-yellow-200 { color: #92400E !important; }
+:root[data-theme='light'] .text-yellow-200\/70 { color: #B45309 !important; }
+:root[data-theme='light'] .text-yellow-300 { color: #B45309 !important; }
+:root[data-theme='light'] .text-yellow-400 { color: #B45309 !important; }
+:root[data-theme='light'] .text-yellow-400\/80 { color: #B45309 !important; }
+:root[data-theme='light'] .bg-yellow-500\/5  { background-color: #FFFBEB !important; }
+:root[data-theme='light'] .bg-yellow-500\/10 { background-color: #FEF3C7 !important; }
+:root[data-theme='light'] .bg-yellow-500\/20 { background-color: #FDE68A !important; }
+:root[data-theme='light'] .border-yellow-500\/20 { border-color: #FCD34D !important; }
+:root[data-theme='light'] .border-yellow-500\/30 { border-color: #F59E0B !important; }
+:root[data-theme='light'] .border-yellow-500\/40 { border-color: #D97706 !important; }
+
+/* 그린 (승인, 완료) */
+:root[data-theme='light'] .text-green-300 { color: #065F46 !important; }
+:root[data-theme='light'] .text-green-400 { color: #047857 !important; }
+:root[data-theme='light'] .bg-green-500\/10 { background-color: #D1FAE5 !important; }
+:root[data-theme='light'] .bg-green-500\/20 { background-color: #A7F3D0 !important; }
+:root[data-theme='light'] .bg-green-500\/30 { background-color: #6EE7B7 !important; }
+:root[data-theme='light'] .border-green-500\/50 { border-color: #10B981 !important; }
+
+/* 레드 (거절, 실패, 에러) */
+:root[data-theme='light'] .text-red-300 { color: #991B1B !important; }
+:root[data-theme='light'] .text-red-400 { color: #B91C1C !important; }
+:root[data-theme='light'] .bg-red-500\/10 { background-color: #FEE2E2 !important; }
+:root[data-theme='light'] .bg-red-500\/20 { background-color: #FECACA !important; }
+:root[data-theme='light'] .bg-red-500\/30 { background-color: #FCA5A5 !important; }
+:root[data-theme='light'] .border-red-400    { border-color: #EF4444 !important; }
+:root[data-theme='light'] .border-red-400\/50 { border-color: #FCA5A5 !important; }
+:root[data-theme='light'] .border-red-400\/60 { border-color: #F87171 !important; }
+:root[data-theme='light'] .border-red-500\/30 { border-color: #FCA5A5 !important; }
+:root[data-theme='light'] .border-red-500\/40 { border-color: #F87171 !important; }
+:root[data-theme='light'] .border-red-500\/50 { border-color: #EF4444 !important; }
+:root[data-theme='light'] .focus\:border-red-400:focus { border-color: #EF4444 !important; }
+
+/* 퍼플 (버전 히스토리) */
+:root[data-theme='light'] .text-purple-200 { color: #5B21B6 !important; }
+:root[data-theme='light'] .text-purple-300 { color: #6D28D9 !important; }
+:root[data-theme='light'] .text-purple-400 { color: #7C3AED !important; }
+:root[data-theme='light'] .bg-purple-500\/5  { background-color: #F5F3FF !important; }
+:root[data-theme='light'] .bg-purple-500\/10 { background-color: #EDE9FE !important; }
+:root[data-theme='light'] .bg-purple-500\/20 { background-color: #DDD6FE !important; }
+:root[data-theme='light'] .bg-purple-400\/20 { background-color: #DDD6FE !important; }
+:root[data-theme='light'] .border-purple-400      { border-color: #7C3AED !important; }
+:root[data-theme='light'] .border-purple-400\/60  { border-color: #A78BFA !important; }
+:root[data-theme='light'] .border-purple-500\/30  { border-color: #C4B5FD !important; }
+:root[data-theme='light'] .border-purple-500\/40  { border-color: #A78BFA !important; }
+:root[data-theme='light'] .hover\:border-purple-400\/60:hover { border-color: #8B5CF6 !important; }
+:root[data-theme='light'] .hover\:text-purple-200:hover { color: #5B21B6 !important; }
+
+/* 바이올렛 (모델 토론) */
+:root[data-theme='light'] .text-violet-200 { color: #5B21B6 !important; }
+:root[data-theme='light'] .text-violet-300 { color: #6D28D9 !important; }
+:root[data-theme='light'] .bg-violet-500\/5  { background-color: #F5F3FF !important; }
+:root[data-theme='light'] .bg-violet-500\/10 { background-color: #EDE9FE !important; }
+:root[data-theme='light'] .border-violet-500\/20 { border-color: #DDD6FE !important; }
+:root[data-theme='light'] .border-violet-500\/30 { border-color: #C4B5FD !important; }
+:root[data-theme='light'] .border-violet-500\/40 { border-color: #A78BFA !important; }
+
+/* 에메랄드 (교차 검토, 완료) */
+:root[data-theme='light'] .text-emerald-300 { color: #065F46 !important; }
+:root[data-theme='light'] .text-emerald-400 { color: #047857 !important; }
+:root[data-theme='light'] .bg-emerald-500\/5  { background-color: #ECFDF5 !important; }
+:root[data-theme='light'] .bg-emerald-500\/10 { background-color: #D1FAE5 !important; }
+:root[data-theme='light'] .bg-emerald-500\/15 { background-color: #A7F3D0 !important; }
+:root[data-theme='light'] .bg-emerald-500\/20 { background-color: #A7F3D0 !important; }
+:root[data-theme='light'] .border-emerald-500\/30 { border-color: #6EE7B7 !important; }
+:root[data-theme='light'] .border-emerald-500\/40 { border-color: #34D399 !important; }
+:root[data-theme='light'] .border-emerald-500\/50 { border-color: #10B981 !important; }
+:root[data-theme='light'] .border-emerald-500\/60 { border-color: #059669 !important; }
+:root[data-theme='light'] .border-emerald-500\/80 { border-color: #047857 !important; }
+
+/* 블루 (활성 에이전트, 로그) */
+:root[data-theme='light'] .text-blue-300 { color: #1D4ED8 !important; }
+:root[data-theme='light'] .text-blue-400 { color: #1D4ED8 !important; }
+:root[data-theme='light'] .bg-blue-500\/20 { background-color: #DBEAFE !important; }
+
+/* 라이트 테마 — 사이드바 로고를 다크 색상으로 */
+:root[data-theme='light'] aside img {
+  filter: brightness(0) saturate(100%) !important;
+}
+
+/* 픽셀 아트 렌더링 */
+canvas, img.pixel {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+/* 스크롤바 스타일 */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: rgb(var(--office-bg-rgb));
+}
+::-webkit-scrollbar-thumb {
+  background: rgb(var(--office-border-rgb));
+  border-radius: 2px;
+}
+
+:root[data-theme='light'] {
+  --office-bg-rgb: 59 130 246;
+  --office-sidebar-rgb: 37 99 235;
+  --office-panel-rgb: 96 165 250;
+  --office-border-rgb: 30 64 175;
+  --office-text-rgb: 2 6 23;
+  --office-surface-text-rgb: 2 6 23;
+  --office-active-rgb: 30 64 175;
+  --office-accent-rgb: 191 219 254;
+  --office-contrast-rgb: 219 234 254;
+}
+
+:root[data-theme='light'] body {
+  background-color: rgb(var(--office-bg-rgb));
+}
+
+:root[data-theme='light'] .text-white,
+:root[data-theme='light'] .text-white\/30,
+:root[data-theme='light'] .text-white\/35,
+:root[data-theme='light'] .text-white\/40,
+:root[data-theme='light'] .text-white\/45,
+:root[data-theme='light'] .text-white\/50,
+:root[data-theme='light'] .text-white\/60,
+:root[data-theme='light'] .text-white\/70,
+:root[data-theme='light'] .text-white\/80,
+:root[data-theme='light'] .text-white\/90 {
+  color: rgb(var(--office-surface-text-rgb)) !important;
+}
+
+:root[data-theme='light'] .hover\:text-white:hover,
+:root[data-theme='light'] .hover\:text-white\/70:hover,
+:root[data-theme='light'] .hover\:text-white\/80:hover {
+  color: rgb(var(--office-active-rgb)) !important;
+}
+
+:root[data-theme='light'] .bg-white\/5,
+:root[data-theme='light'] .bg-white\/10,
+:root[data-theme='light'] .bg-white\/20,
+:root[data-theme='light'] .bg-white\/\[0\.02\],
+:root[data-theme='light'] .bg-white\/\[0\.04\] {
+  background-color: rgb(var(--office-panel-rgb) / 0.35) !important;
+}
+
+:root[data-theme='light'] .hover\:bg-white\/5:hover,
+:root[data-theme='light'] .hover\:bg-white\/10:hover {
+  background-color: rgb(var(--office-panel-rgb) / 0.55) !important;
+}
+
+:root[data-theme='light'] .border-white\/5,
+:root[data-theme='light'] .border-white\/10,
+:root[data-theme='light'] .border-white\/20,
+:root[data-theme='light'] .border-white\/25,
+:root[data-theme='light'] .hover\:border-white\/20:hover,
+:root[data-theme='light'] .hover\:border-white\/25:hover,
+:root[data-theme='light'] .focus\:border-white\/30:focus {
+  border-color: rgb(var(--office-border-rgb) / 0.55) !important;
+}
+
+:root[data-theme='light'] .placeholder-white\/20::placeholder,
+:root[data-theme='light'] .placeholder-white\/30::placeholder {
+  color: rgb(var(--office-surface-text-rgb) / 0.45) !important;
+}
+
+:root[data-theme='light'] .bg-office-sidebar,
+:root[data-theme='light'] .bg-office-sidebar\/90,
+:root[data-theme='light'] .bg-office-panel,
+:root[data-theme='light'] .bg-office-panel\/30,
+:root[data-theme='light'] .bg-office-panel\/40,
+:root[data-theme='light'] .bg-office-panel\/50,
+:root[data-theme='light'] .bg-office-panel\/60,
+:root[data-theme='light'] .bg-office-panel\/80,
+:root[data-theme='light'] .bg-office-panel\/90 {
+  --office-text-rgb: var(--office-surface-text-rgb);
+  color: rgb(var(--office-surface-text-rgb));
+}
+
+:root[data-theme='light'] .bg-office-sidebar {
+  background-color: rgb(var(--office-sidebar-rgb)) !important;
+}
+
+:root[data-theme='light'] .bg-office-sidebar\/90 {
+  background-color: rgb(var(--office-sidebar-rgb) / 0.9) !important;
+}
+
+:root[data-theme='light'] .bg-office-panel {
+  background-color: rgb(var(--office-panel-rgb)) !important;
+}
+
+:root[data-theme='light'] .bg-yellow-500\/5,
+:root[data-theme='light'] .bg-yellow-500\/10,
+:root[data-theme='light'] .bg-yellow-500\/20,
+:root[data-theme='light'] .bg-green-500\/10,
+:root[data-theme='light'] .bg-green-500\/20,
+:root[data-theme='light'] .bg-green-500\/30,
+:root[data-theme='light'] .bg-red-500\/10,
+:root[data-theme='light'] .bg-red-500\/20,
+:root[data-theme='light'] .bg-red-500\/30,
+:root[data-theme='light'] .bg-purple-500\/5,
+:root[data-theme='light'] .bg-purple-500\/10,
+:root[data-theme='light'] .bg-purple-500\/20,
+:root[data-theme='light'] .bg-purple-400\/20,
+:root[data-theme='light'] .bg-violet-500\/5,
+:root[data-theme='light'] .bg-violet-500\/10,
+:root[data-theme='light'] .bg-emerald-500\/5,
+:root[data-theme='light'] .bg-emerald-500\/10,
+:root[data-theme='light'] .bg-emerald-500\/15,
+:root[data-theme='light'] .bg-emerald-500\/20,
+:root[data-theme='light'] .bg-blue-500\/20 {
+  background-color: rgb(var(--office-panel-rgb) / 0.45) !important;
+}
+
+:root[data-theme='light'] .text-yellow-100,
+:root[data-theme='light'] .text-yellow-200,
+:root[data-theme='light'] .text-yellow-200\/70,
+:root[data-theme='light'] .text-yellow-300,
+:root[data-theme='light'] .text-yellow-400,
+:root[data-theme='light'] .text-yellow-400\/80,
+:root[data-theme='light'] .text-green-300,
+:root[data-theme='light'] .text-green-400,
+:root[data-theme='light'] .text-red-300,
+:root[data-theme='light'] .text-red-400,
+:root[data-theme='light'] .text-purple-200,
+:root[data-theme='light'] .text-purple-300,
+:root[data-theme='light'] .text-purple-400,
+:root[data-theme='light'] .text-violet-200,
+:root[data-theme='light'] .text-violet-300,
+:root[data-theme='light'] .text-emerald-300,
+:root[data-theme='light'] .text-emerald-400,
+:root[data-theme='light'] .text-blue-300,
+:root[data-theme='light'] .text-blue-400 {
+  color: rgb(var(--office-active-rgb)) !important;
+}
+
+:root[data-theme='light'] .border-yellow-500\/20,
+:root[data-theme='light'] .border-yellow-500\/30,
+:root[data-theme='light'] .border-yellow-500\/40,
+:root[data-theme='light'] .border-green-500\/50,
+:root[data-theme='light'] .border-red-400,
+:root[data-theme='light'] .border-red-400\/50,
+:root[data-theme='light'] .border-red-400\/60,
+:root[data-theme='light'] .border-red-500\/30,
+:root[data-theme='light'] .border-red-500\/40,
+:root[data-theme='light'] .border-red-500\/50,
+:root[data-theme='light'] .border-purple-400,
+:root[data-theme='light'] .border-purple-400\/60,
+:root[data-theme='light'] .border-purple-500\/30,
+:root[data-theme='light'] .border-purple-500\/40,
+:root[data-theme='light'] .border-violet-500\/20,
+:root[data-theme='light'] .border-violet-500\/30,
+:root[data-theme='light'] .border-violet-500\/40,
+:root[data-theme='light'] .border-emerald-500\/30,
+:root[data-theme='light'] .border-emerald-500\/40,
+:root[data-theme='light'] .border-emerald-500\/50,
+:root[data-theme='light'] .border-emerald-500\/60,
+:root[data-theme='light'] .border-emerald-500\/80 {
+  border-color: rgb(var(--office-border-rgb) / 0.65) !important;
+}
+
+/* Light theme final palette: #3B82F6 based, no pure white surfaces. */
+:root[data-theme='light'] {
+  --office-bg-rgb: 59 130 246;
+  --office-sidebar-rgb: 219 234 254;
+  --office-panel-rgb: 191 219 254;
+  --office-border-rgb: 96 165 250;
+  --office-text-rgb: 239 246 255;
+  --office-surface-text-rgb: 15 23 42;
+  --office-active-rgb: 29 78 216;
+  --office-accent-rgb: 30 64 175;
+  --office-contrast-rgb: 239 246 255;
+}
+
+:root[data-theme='light'] body,
+:root[data-theme='light'] .bg-office-bg {
+  background-color: rgb(var(--office-bg-rgb)) !important;
+}
+
+:root[data-theme='light'] .bg-office-sidebar {
+  --office-text-rgb: var(--office-surface-text-rgb);
+  background-color: rgb(var(--office-sidebar-rgb)) !important;
+  color: rgb(var(--office-surface-text-rgb)) !important;
+  box-shadow: none !important;
+}
+
+:root[data-theme='light'] .bg-office-sidebar\/90 {
+  --office-text-rgb: var(--office-surface-text-rgb);
+  background-color: rgb(var(--office-sidebar-rgb) / 0.9) !important;
+  color: rgb(var(--office-surface-text-rgb)) !important;
+}
+
+:root[data-theme='light'] .bg-office-panel,
+:root[data-theme='light'] .bg-office-panel\/30,
+:root[data-theme='light'] .bg-office-panel\/40,
+:root[data-theme='light'] .bg-office-panel\/50,
+:root[data-theme='light'] .bg-office-panel\/60,
+:root[data-theme='light'] .bg-office-panel\/80,
+:root[data-theme='light'] .bg-office-panel\/90 {
+  --office-text-rgb: var(--office-surface-text-rgb);
+  background-color: rgb(var(--office-panel-rgb) / 0.88) !important;
+  color: rgb(var(--office-surface-text-rgb)) !important;
+}
+
+:root[data-theme='light'] .bg-office-panel\/30 {
+  background-color: rgb(var(--office-panel-rgb) / 0.42) !important;
+}
+
+:root[data-theme='light'] .bg-office-panel\/40,
+:root[data-theme='light'] .bg-office-panel\/50 {
+  background-color: rgb(var(--office-panel-rgb) / 0.58) !important;
+}
+
+:root[data-theme='light'] .bg-office-panel\/60,
+:root[data-theme='light'] .bg-office-panel\/80,
+:root[data-theme='light'] .bg-office-panel\/90 {
+  background-color: rgb(var(--office-panel-rgb) / 0.76) !important;
+}
+
+:root[data-theme='light'] .bg-office-active {
+  background-color: rgb(var(--office-active-rgb)) !important;
+}
+
+:root[data-theme='light'] .bg-office-active\/5,
+:root[data-theme='light'] .bg-office-active\/10,
+:root[data-theme='light'] .bg-office-active\/15,
+:root[data-theme='light'] .bg-office-active\/20,
+:root[data-theme='light'] .bg-office-active\/25,
+:root[data-theme='light'] .bg-office-active\/30,
+:root[data-theme='light'] .bg-office-active\/40,
+:root[data-theme='light'] .bg-office-active\/50,
+:root[data-theme='light'] .bg-office-active\/80 {
+  background-color: rgb(var(--office-active-rgb) / 0.14) !important;
+}
+
+:root[data-theme='light'] .text-white,
+:root[data-theme='light'] .text-white\/30,
+:root[data-theme='light'] .text-white\/35,
+:root[data-theme='light'] .text-white\/40,
+:root[data-theme='light'] .text-white\/45,
+:root[data-theme='light'] .text-white\/50,
+:root[data-theme='light'] .text-white\/60,
+:root[data-theme='light'] .text-white\/70,
+:root[data-theme='light'] .text-white\/80,
+:root[data-theme='light'] .text-white\/90 {
+  color: rgb(var(--office-contrast-rgb)) !important;
+}
+
+:root[data-theme='light'] .bg-office-sidebar .text-white,
+:root[data-theme='light'] .bg-office-sidebar\/90 .text-white,
+:root[data-theme='light'] .bg-office-panel .text-white,
+:root[data-theme='light'] .bg-office-panel\/30 .text-white,
+:root[data-theme='light'] .bg-office-panel\/40 .text-white,
+:root[data-theme='light'] .bg-office-panel\/50 .text-white,
+:root[data-theme='light'] .bg-office-panel\/60 .text-white,
+:root[data-theme='light'] .bg-office-panel\/80 .text-white,
+:root[data-theme='light'] .bg-office-panel\/90 .text-white {
+  color: rgb(var(--office-surface-text-rgb)) !important;
+}
+
+:root[data-theme='light'] .hover\:text-white:hover,
+:root[data-theme='light'] .hover\:text-white\/70:hover,
+:root[data-theme='light'] .hover\:text-white\/80:hover {
+  color: rgb(var(--office-active-rgb)) !important;
+}
+
+:root[data-theme='light'] .border-office-panel,
+:root[data-theme='light'] .border-office-panel\/50,
+:root[data-theme='light'] .border-office-panel\/60,
+:root[data-theme='light'] .border-office-panel\/70 {
+  border-color: rgb(var(--office-border-rgb) / 0.58) !important;
+}
+
+:root[data-theme='light'] .bg-white\/5,
+:root[data-theme='light'] .bg-white\/10,
+:root[data-theme='light'] .bg-white\/20,
+:root[data-theme='light'] .bg-white\/\[0\.02\],
+:root[data-theme='light'] .bg-white\/\[0\.04\] {
+  background-color: rgb(var(--office-panel-rgb) / 0.36) !important;
+}
+
+:root[data-theme='light'] .hover\:bg-white\/5:hover,
+:root[data-theme='light'] .hover\:bg-white\/10:hover,
+:root[data-theme='light'] .hover\:bg-office-panel\/50:hover,
+:root[data-theme='light'] .hover\:bg-office-panel\/60:hover,
+:root[data-theme='light'] .hover\:bg-office-panel\/80:hover {
+  background-color: rgb(var(--office-panel-rgb) / 0.72) !important;
+}
+
+:root[data-theme='light'] .border-white\/5,
+:root[data-theme='light'] .border-white\/10,
+:root[data-theme='light'] .border-white\/20,
+:root[data-theme='light'] .border-white\/25,
+:root[data-theme='light'] .hover\:border-white\/20:hover,
+:root[data-theme='light'] .hover\:border-white\/25:hover {
+  border-color: rgb(var(--office-border-rgb) / 0.5) !important;
+}
+
+:root[data-theme='light'] .text-office-active,
+:root[data-theme='light'] .text-office-active\/60,
+:root[data-theme='light'] .text-office-active\/70,
+:root[data-theme='light'] .text-office-active\/80 {
+  color: rgb(var(--office-active-rgb)) !important;
+}
+
+:root[data-theme='light'] .bg-yellow-500\/5,
+:root[data-theme='light'] .bg-yellow-500\/10,
+:root[data-theme='light'] .bg-yellow-500\/20,
+:root[data-theme='light'] .bg-green-500\/10,
+:root[data-theme='light'] .bg-green-500\/20,
+:root[data-theme='light'] .bg-green-500\/30,
+:root[data-theme='light'] .bg-red-500\/10,
+:root[data-theme='light'] .bg-red-500\/20,
+:root[data-theme='light'] .bg-red-500\/30,
+:root[data-theme='light'] .bg-purple-500\/5,
+:root[data-theme='light'] .bg-purple-500\/10,
+:root[data-theme='light'] .bg-purple-500\/20,
+:root[data-theme='light'] .bg-purple-400\/20,
+:root[data-theme='light'] .bg-violet-500\/5,
+:root[data-theme='light'] .bg-violet-500\/10,
+:root[data-theme='light'] .bg-emerald-500\/5,
+:root[data-theme='light'] .bg-emerald-500\/10,
+:root[data-theme='light'] .bg-emerald-500\/15,
+:root[data-theme='light'] .bg-emerald-500\/20,
+:root[data-theme='light'] .bg-blue-500\/20 {
+  background-color: rgb(var(--office-panel-rgb) / 0.52) !important;
+}
+
+/*
+  Authoritative light theme palette.
+  #3B82F6 is the brand field color; surfaces use blue tints instead of pure white.
+*/
+:root[data-theme='light'] {
+  --office-bg-rgb: 59 130 246;
+  --office-sidebar-rgb: 226 239 255;
+  --office-panel-rgb: 211 228 252;
+  --office-border-rgb: 123 171 234;
+  --office-text-rgb: 234 244 255;
+  --office-surface-text-rgb: 9 27 55;
+  --office-active-rgb: 30 91 200;
+  --office-accent-rgb: 239 174 79;
+  --office-contrast-rgb: 238 246 255;
+}
+
+:root[data-theme='light'] body {
+  background: rgb(var(--office-bg-rgb));
+}
+
+:root[data-theme='light'] .bg-office-bg {
+  background: linear-gradient(135deg, #3B82F6 0%, #3479EA 45%, #2E6FDA 100%) !important;
+}
+
+:root[data-theme='light'] .bg-office-sidebar,
+:root[data-theme='light'] .bg-office-sidebar\/90 {
+  --office-text-rgb: var(--office-surface-text-rgb);
+  background: #E2EFFF !important;
+  color: rgb(var(--office-surface-text-rgb)) !important;
+  box-shadow: none !important;
+}
+
+:root[data-theme='light'] .bg-office-panel {
+  --office-text-rgb: var(--office-surface-text-rgb);
+  background-color: #D3E4FC !important;
+  color: rgb(var(--office-surface-text-rgb)) !important;
+}
+
+/*
+  Pastel theme presets.
+  Keep this block at the end so it overrides earlier light-theme experiments.
+*/
+:root[data-theme='light'],
+:root[data-theme='pastel-sky'] {
+  --office-bg-rgb: 243 247 255;
+  --office-sidebar-rgb: 255 255 255;
+  --office-panel-rgb: 235 244 255;
+  --office-border-rgb: 196 214 241;
+  --office-text-rgb: 94 112 141;
+  --office-surface-text-rgb: 28 47 77;
+  --office-active-rgb: 124 156 255;
+  --office-accent-rgb: 255 182 193;
+  --office-contrast-rgb: 28 47 77;
+}
+
+:root[data-theme='pastel-mint'] {
+  --office-bg-rgb: 242 250 247;
+  --office-sidebar-rgb: 255 255 255;
+  --office-panel-rgb: 229 246 239;
+  --office-border-rgb: 188 226 213;
+  --office-text-rgb: 95 123 116;
+  --office-surface-text-rgb: 29 70 61;
+  --office-active-rgb: 103 199 179;
+  --office-accent-rgb: 255 194 204;
+  --office-contrast-rgb: 29 70 61;
+}
+
+:root[data-theme='pastel-lavender'] {
+  --office-bg-rgb: 247 244 255;
+  --office-sidebar-rgb: 255 255 255;
+  --office-panel-rgb: 241 234 255;
+  --office-border-rgb: 214 200 245;
+  --office-text-rgb: 112 104 146;
+  --office-surface-text-rgb: 61 49 107;
+  --office-active-rgb: 141 122 230;
+  --office-accent-rgb: 255 196 220;
+  --office-contrast-rgb: 61 49 107;
+}
+
+:root[data-theme='pastel-peach'] {
+  --office-bg-rgb: 255 247 242;
+  --office-sidebar-rgb: 255 255 255;
+  --office-panel-rgb: 255 236 226;
+  --office-border-rgb: 246 205 187;
+  --office-text-rgb: 139 110 97;
+  --office-surface-text-rgb: 90 55 44;
+  --office-active-rgb: 243 155 127;
+  --office-accent-rgb: 255 196 152;
+  --office-contrast-rgb: 90 55 44;
+}
+
+:root[data-theme='pastel-pink'] {
+  --office-bg-rgb: 255 245 250;
+  --office-sidebar-rgb: 255 255 255;
+  --office-panel-rgb: 255 232 241;
+  --office-border-rgb: 243 202 220;
+  --office-text-rgb: 142 104 121;
+  --office-surface-text-rgb: 91 46 67;
+  --office-active-rgb: 242 157 189;
+  --office-accent-rgb: 255 196 214;
+  --office-contrast-rgb: 91 46 67;
+}
+
+:root[data-theme='light'] body,
+:root[data-theme='pastel-sky'] body,
+:root[data-theme='pastel-mint'] body,
+:root[data-theme='pastel-lavender'] body,
+:root[data-theme='pastel-peach'] body,
+:root[data-theme='pastel-pink'] body,
+:root[data-theme='light'] .bg-office-bg,
+:root[data-theme='pastel-sky'] .bg-office-bg,
+:root[data-theme='pastel-mint'] .bg-office-bg,
+:root[data-theme='pastel-lavender'] .bg-office-bg,
+:root[data-theme='pastel-peach'] .bg-office-bg,
+:root[data-theme='pastel-pink'] .bg-office-bg {
+  background: rgb(var(--office-bg-rgb)) !important;
+}
+
+:root[data-theme='light'] .bg-office-sidebar,
+:root[data-theme='light'] .bg-office-sidebar\/75,
+:root[data-theme='light'] .bg-office-sidebar\/80,
+:root[data-theme='light'] .bg-office-sidebar\/90,
+:root[data-theme='pastel-sky'] .bg-office-sidebar,
+:root[data-theme='pastel-sky'] .bg-office-sidebar\/75,
+:root[data-theme='pastel-sky'] .bg-office-sidebar\/80,
+:root[data-theme='pastel-sky'] .bg-office-sidebar\/90,
+:root[data-theme='pastel-mint'] .bg-office-sidebar,
+:root[data-theme='pastel-mint'] .bg-office-sidebar\/75,
+:root[data-theme='pastel-mint'] .bg-office-sidebar\/80,
+:root[data-theme='pastel-mint'] .bg-office-sidebar\/90,
+:root[data-theme='pastel-lavender'] .bg-office-sidebar,
+:root[data-theme='pastel-lavender'] .bg-office-sidebar\/75,
+:root[data-theme='pastel-lavender'] .bg-office-sidebar\/80,
+:root[data-theme='pastel-lavender'] .bg-office-sidebar\/90,
+:root[data-theme='pastel-peach'] .bg-office-sidebar,
+:root[data-theme='pastel-peach'] .bg-office-sidebar\/75,
+:root[data-theme='pastel-peach'] .bg-office-sidebar\/80,
+:root[data-theme='pastel-peach'] .bg-office-sidebar\/90,
+:root[data-theme='pastel-pink'] .bg-office-sidebar,
+:root[data-theme='pastel-pink'] .bg-office-sidebar\/75,
+:root[data-theme='pastel-pink'] .bg-office-sidebar\/80,
+:root[data-theme='pastel-pink'] .bg-office-sidebar\/90 {
+  --office-text-rgb: var(--office-surface-text-rgb);
+  color: rgb(var(--office-surface-text-rgb)) !important;
+  box-shadow: 0 1px 3px rgb(15 23 42 / 0.05), 0 1px 2px rgb(15 23 42 / 0.03);
+}
+
+:root[data-theme='light'] .bg-office-sidebar,
+:root[data-theme='pastel-sky'] .bg-office-sidebar,
+:root[data-theme='pastel-mint'] .bg-office-sidebar,
+:root[data-theme='pastel-lavender'] .bg-office-sidebar,
+:root[data-theme='pastel-peach'] .bg-office-sidebar,
+:root[data-theme='pastel-pink'] .bg-office-sidebar {
+  background: rgb(var(--office-sidebar-rgb)) !important;
+}
+
+:root[data-theme='light'] .bg-office-sidebar\/75,
+:root[data-theme='pastel-sky'] .bg-office-sidebar\/75,
+:root[data-theme='pastel-mint'] .bg-office-sidebar\/75,
+:root[data-theme='pastel-lavender'] .bg-office-sidebar\/75,
+:root[data-theme='pastel-peach'] .bg-office-sidebar\/75,
+:root[data-theme='pastel-pink'] .bg-office-sidebar\/75 {
+  background: rgb(var(--office-sidebar-rgb) / 0.75) !important;
+}
+
+:root[data-theme='light'] .bg-office-sidebar\/80,
+:root[data-theme='pastel-sky'] .bg-office-sidebar\/80,
+:root[data-theme='pastel-mint'] .bg-office-sidebar\/80,
+:root[data-theme='pastel-lavender'] .bg-office-sidebar\/80,
+:root[data-theme='pastel-peach'] .bg-office-sidebar\/80,
+:root[data-theme='pastel-pink'] .bg-office-sidebar\/80 {
+  background: rgb(var(--office-sidebar-rgb) / 0.8) !important;
+}
+
+:root[data-theme='light'] .bg-office-sidebar\/90,
+:root[data-theme='pastel-sky'] .bg-office-sidebar\/90,
+:root[data-theme='pastel-mint'] .bg-office-sidebar\/90,
+:root[data-theme='pastel-lavender'] .bg-office-sidebar\/90,
+:root[data-theme='pastel-peach'] .bg-office-sidebar\/90,
+:root[data-theme='pastel-pink'] .bg-office-sidebar\/90 {
+  background: rgb(var(--office-sidebar-rgb) / 0.9) !important;
+}
+
+:root[data-theme='light'] .bg-office-panel,
+:root[data-theme='light'] .bg-office-panel\/30,
+:root[data-theme='light'] .bg-office-panel\/35,
+:root[data-theme='light'] .bg-office-panel\/40,
+:root[data-theme='light'] .bg-office-panel\/50,
+:root[data-theme='light'] .bg-office-panel\/60,
+:root[data-theme='light'] .bg-office-panel\/80,
+:root[data-theme='light'] .bg-office-panel\/90,
+:root[data-theme='pastel-sky'] .bg-office-panel,
+:root[data-theme='pastel-sky'] .bg-office-panel\/30,
+:root[data-theme='pastel-sky'] .bg-office-panel\/35,
+:root[data-theme='pastel-sky'] .bg-office-panel\/40,
+:root[data-theme='pastel-sky'] .bg-office-panel\/50,
+:root[data-theme='pastel-sky'] .bg-office-panel\/60,
+:root[data-theme='pastel-sky'] .bg-office-panel\/80,
+:root[data-theme='pastel-sky'] .bg-office-panel\/90,
+:root[data-theme='pastel-mint'] .bg-office-panel,
+:root[data-theme='pastel-mint'] .bg-office-panel\/30,
+:root[data-theme='pastel-mint'] .bg-office-panel\/35,
+:root[data-theme='pastel-mint'] .bg-office-panel\/40,
+:root[data-theme='pastel-mint'] .bg-office-panel\/50,
+:root[data-theme='pastel-mint'] .bg-office-panel\/60,
+:root[data-theme='pastel-mint'] .bg-office-panel\/80,
+:root[data-theme='pastel-mint'] .bg-office-panel\/90,
+:root[data-theme='pastel-lavender'] .bg-office-panel,
+:root[data-theme='pastel-lavender'] .bg-office-panel\/30,
+:root[data-theme='pastel-lavender'] .bg-office-panel\/35,
+:root[data-theme='pastel-lavender'] .bg-office-panel\/40,
+:root[data-theme='pastel-lavender'] .bg-office-panel\/50,
+:root[data-theme='pastel-lavender'] .bg-office-panel\/60,
+:root[data-theme='pastel-lavender'] .bg-office-panel\/80,
+:root[data-theme='pastel-lavender'] .bg-office-panel\/90,
+:root[data-theme='pastel-peach'] .bg-office-panel,
+:root[data-theme='pastel-peach'] .bg-office-panel\/30,
+:root[data-theme='pastel-peach'] .bg-office-panel\/35,
+:root[data-theme='pastel-peach'] .bg-office-panel\/40,
+:root[data-theme='pastel-peach'] .bg-office-panel\/50,
+:root[data-theme='pastel-peach'] .bg-office-panel\/60,
+:root[data-theme='pastel-peach'] .bg-office-panel\/80,
+:root[data-theme='pastel-peach'] .bg-office-panel\/90,
+:root[data-theme='pastel-pink'] .bg-office-panel,
+:root[data-theme='pastel-pink'] .bg-office-panel\/30,
+:root[data-theme='pastel-pink'] .bg-office-panel\/35,
+:root[data-theme='pastel-pink'] .bg-office-panel\/40,
+:root[data-theme='pastel-pink'] .bg-office-panel\/50,
+:root[data-theme='pastel-pink'] .bg-office-panel\/60,
+:root[data-theme='pastel-pink'] .bg-office-panel\/80,
+:root[data-theme='pastel-pink'] .bg-office-panel\/90 {
+  --office-text-rgb: var(--office-surface-text-rgb);
+  color: rgb(var(--office-surface-text-rgb)) !important;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.03);
+}
+
+:root[data-theme='light'] .bg-office-panel,
+:root[data-theme='pastel-sky'] .bg-office-panel,
+:root[data-theme='pastel-mint'] .bg-office-panel,
+:root[data-theme='pastel-lavender'] .bg-office-panel,
+:root[data-theme='pastel-peach'] .bg-office-panel,
+:root[data-theme='pastel-pink'] .bg-office-panel {
+  background: rgb(var(--office-panel-rgb)) !important;
+}
+
+:root[data-theme='light'] .bg-office-panel\/30,
+:root[data-theme='pastel-sky'] .bg-office-panel\/30,
+:root[data-theme='pastel-mint'] .bg-office-panel\/30,
+:root[data-theme='pastel-lavender'] .bg-office-panel\/30,
+:root[data-theme='pastel-peach'] .bg-office-panel\/30,
+:root[data-theme='pastel-pink'] .bg-office-panel\/30 {
+  background: rgb(var(--office-panel-rgb) / 0.3) !important;
+}
+
+:root[data-theme='light'] .bg-office-panel\/35,
+:root[data-theme='pastel-sky'] .bg-office-panel\/35,
+:root[data-theme='pastel-mint'] .bg-office-panel\/35,
+:root[data-theme='pastel-lavender'] .bg-office-panel\/35,
+:root[data-theme='pastel-peach'] .bg-office-panel\/35,
+:root[data-theme='pastel-pink'] .bg-office-panel\/35 {
+  background: rgb(var(--office-panel-rgb) / 0.35) !important;
+}
+
+:root[data-theme='light'] .bg-office-panel\/40,
+:root[data-theme='pastel-sky'] .bg-office-panel\/40,
+:root[data-theme='pastel-mint'] .bg-office-panel\/40,
+:root[data-theme='pastel-lavender'] .bg-office-panel\/40,
+:root[data-theme='pastel-peach'] .bg-office-panel\/40,
+:root[data-theme='pastel-pink'] .bg-office-panel\/40 {
+  background: rgb(var(--office-panel-rgb) / 0.4) !important;
+}
+
+:root[data-theme='light'] .bg-office-panel\/50,
+:root[data-theme='pastel-sky'] .bg-office-panel\/50,
+:root[data-theme='pastel-mint'] .bg-office-panel\/50,
+:root[data-theme='pastel-lavender'] .bg-office-panel\/50,
+:root[data-theme='pastel-peach'] .bg-office-panel\/50,
+:root[data-theme='pastel-pink'] .bg-office-panel\/50 {
+  background: rgb(var(--office-panel-rgb) / 0.5) !important;
+}
+
+:root[data-theme='light'] .bg-office-panel\/60,
+:root[data-theme='pastel-sky'] .bg-office-panel\/60,
+:root[data-theme='pastel-mint'] .bg-office-panel\/60,
+:root[data-theme='pastel-lavender'] .bg-office-panel\/60,
+:root[data-theme='pastel-peach'] .bg-office-panel\/60,
+:root[data-theme='pastel-pink'] .bg-office-panel\/60 {
+  background: rgb(var(--office-panel-rgb) / 0.6) !important;
+}
+
+:root[data-theme='light'] .bg-office-panel\/80,
+:root[data-theme='pastel-sky'] .bg-office-panel\/80,
+:root[data-theme='pastel-mint'] .bg-office-panel\/80,
+:root[data-theme='pastel-lavender'] .bg-office-panel\/80,
+:root[data-theme='pastel-peach'] .bg-office-panel\/80,
+:root[data-theme='pastel-pink'] .bg-office-panel\/80 {
+  background: rgb(var(--office-panel-rgb) / 0.8) !important;
+}
+
+:root[data-theme='light'] .bg-office-panel\/90,
+:root[data-theme='pastel-sky'] .bg-office-panel\/90,
+:root[data-theme='pastel-mint'] .bg-office-panel\/90,
+:root[data-theme='pastel-lavender'] .bg-office-panel\/90,
+:root[data-theme='pastel-peach'] .bg-office-panel\/90,
+:root[data-theme='pastel-pink'] .bg-office-panel\/90 {
+  background: rgb(var(--office-panel-rgb) / 0.9) !important;
+}
+
+:root[data-theme='light'] .border-office-panel,
+:root[data-theme='light'] .border-office-panel\/50,
+:root[data-theme='light'] .border-office-panel\/60,
+:root[data-theme='light'] .border-office-panel\/70,
+:root[data-theme='pastel-sky'] .border-office-panel,
+:root[data-theme='pastel-sky'] .border-office-panel\/50,
+:root[data-theme='pastel-sky'] .border-office-panel\/60,
+:root[data-theme='pastel-sky'] .border-office-panel\/70,
+:root[data-theme='pastel-mint'] .border-office-panel,
+:root[data-theme='pastel-mint'] .border-office-panel\/50,
+:root[data-theme='pastel-mint'] .border-office-panel\/60,
+:root[data-theme='pastel-mint'] .border-office-panel\/70,
+:root[data-theme='pastel-lavender'] .border-office-panel,
+:root[data-theme='pastel-lavender'] .border-office-panel\/50,
+:root[data-theme='pastel-lavender'] .border-office-panel\/60,
+:root[data-theme='pastel-lavender'] .border-office-panel\/70,
+:root[data-theme='pastel-peach'] .border-office-panel,
+:root[data-theme='pastel-peach'] .border-office-panel\/50,
+:root[data-theme='pastel-peach'] .border-office-panel\/60,
+:root[data-theme='pastel-peach'] .border-office-panel\/70,
+:root[data-theme='pastel-pink'] .border-office-panel,
+:root[data-theme='pastel-pink'] .border-office-panel\/50,
+:root[data-theme='pastel-pink'] .border-office-panel\/60,
+:root[data-theme='pastel-pink'] .border-office-panel\/70 {
+  border-color: rgb(var(--office-border-rgb) / 0.75) !important;
+}
+
+:root[data-theme='light'] .text-white,
+:root[data-theme='pastel-sky'] .text-white,
+:root[data-theme='pastel-mint'] .text-white,
+:root[data-theme='pastel-lavender'] .text-white,
+:root[data-theme='pastel-peach'] .text-white,
+:root[data-theme='pastel-pink'] .text-white,
+:root[data-theme='light'] .bg-office-sidebar .text-white,
+:root[data-theme='light'] .bg-office-panel .text-white,
+:root[data-theme='pastel-sky'] .bg-office-sidebar .text-white,
+:root[data-theme='pastel-sky'] .bg-office-panel .text-white,
+:root[data-theme='pastel-mint'] .bg-office-sidebar .text-white,
+:root[data-theme='pastel-mint'] .bg-office-panel .text-white,
+:root[data-theme='pastel-lavender'] .bg-office-sidebar .text-white,
+:root[data-theme='pastel-lavender'] .bg-office-panel .text-white,
+:root[data-theme='pastel-peach'] .bg-office-sidebar .text-white,
+:root[data-theme='pastel-peach'] .bg-office-panel .text-white,
+:root[data-theme='pastel-pink'] .bg-office-sidebar .text-white,
+:root[data-theme='pastel-pink'] .bg-office-panel .text-white {
+  color: rgb(var(--office-surface-text-rgb)) !important;
+}
+
+:root[data-theme='light'] .hover\:text-white:hover,
+:root[data-theme='pastel-sky'] .hover\:text-white:hover,
+:root[data-theme='pastel-mint'] .hover\:text-white:hover,
+:root[data-theme='pastel-lavender'] .hover\:text-white:hover,
+:root[data-theme='pastel-peach'] .hover\:text-white:hover,
+:root[data-theme='pastel-pink'] .hover\:text-white:hover {
+  color: rgb(var(--office-active-rgb)) !important;
+}
+
+/* Final office theme overrides. Keep this block last. */
+.bg-office-sidebar\/75 {
+  background-color: rgb(var(--office-sidebar-rgb) / 0.75) !important;
+}
+
+.bg-office-sidebar\/80 {
+  background-color: rgb(var(--office-sidebar-rgb) / 0.8) !important;
+}
+
+.bg-office-panel\/35 {
+  background-color: rgb(var(--office-panel-rgb) / 0.35) !important;
+}
+
+:root[data-theme='light'] {
+  --office-bg-rgb: 241 245 249;
+  --office-sidebar-rgb: 255 255 255;
+  --office-panel-rgb: 239 246 255;
+  --office-border-rgb: 203 213 225;
+  --office-text-rgb: 71 85 105;
+  --office-surface-text-rgb: 15 23 42;
+  --office-active-rgb: 59 130 246;
+  --office-accent-rgb: 234 88 12;
+  --office-contrast-rgb: 15 23 42;
+}
+
+:root[data-theme='light'] body,
+:root[data-theme='light'] .bg-office-bg {
+  background: rgb(var(--office-bg-rgb)) !important;
+}
+
+:root[data-theme='light'] .bg-office-sidebar,
+:root[data-theme='light'] .bg-office-sidebar\/75,
+:root[data-theme='light'] .bg-office-sidebar\/80,
+:root[data-theme='light'] .bg-office-sidebar\/90 {
+  --office-text-rgb: var(--office-surface-text-rgb);
+  background: rgb(var(--office-sidebar-rgb)) !important;
+  color: rgb(var(--office-surface-text-rgb)) !important;
+  box-shadow: 0 1px 3px rgb(15 23 42 / 0.06), 0 1px 2px rgb(15 23 42 / 0.04);
+}
+
+:root[data-theme='light'] .bg-office-sidebar\/75 {
+  background: rgb(var(--office-sidebar-rgb) / 0.75) !important;
+}
+
+:root[data-theme='light'] .bg-office-sidebar\/80 {
+  background: rgb(var(--office-sidebar-rgb) / 0.8) !important;
+}
+
+:root[data-theme='light'] .bg-office-sidebar\/90 {
+  background: rgb(var(--office-sidebar-rgb) / 0.9) !important;
+}
+
+:root[data-theme='light'] .bg-office-panel,
+:root[data-theme='light'] .bg-office-panel\/30,
+:root[data-theme='light'] .bg-office-panel\/35,
+:root[data-theme='light'] .bg-office-panel\/40,
+:root[data-theme='light'] .bg-office-panel\/50,
+:root[data-theme='light'] .bg-office-panel\/60,
+:root[data-theme='light'] .bg-office-panel\/80,
+:root[data-theme='light'] .bg-office-panel\/90 {
+  --office-text-rgb: var(--office-surface-text-rgb);
+  color: rgb(var(--office-surface-text-rgb)) !important;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.03);
+}
+
+:root[data-theme='light'] .bg-office-panel {
+  background: rgb(var(--office-panel-rgb)) !important;
+}
+
+:root[data-theme='light'] .bg-office-panel\/30 {
+  background: rgb(var(--office-panel-rgb) / 0.3) !important;
+}
+
+:root[data-theme='light'] .bg-office-panel\/35 {
+  background: rgb(var(--office-panel-rgb) / 0.35) !important;
+}
+
+:root[data-theme='light'] .bg-office-panel\/40 {
+  background: rgb(var(--office-panel-rgb) / 0.4) !important;
+}
+
+:root[data-theme='light'] .bg-office-panel\/50 {
+  background: rgb(var(--office-panel-rgb) / 0.5) !important;
+}
+
+:root[data-theme='light'] .bg-office-panel\/60 {
+  background: rgb(var(--office-panel-rgb) / 0.6) !important;
+}
+
+:root[data-theme='light'] .bg-office-panel\/80 {
+  background: rgb(var(--office-panel-rgb) / 0.8) !important;
+}
+
+:root[data-theme='light'] .bg-office-panel\/90 {
+  background: rgb(var(--office-panel-rgb) / 0.9) !important;
+}
+
+:root[data-theme='light'] .text-white,
+:root[data-theme='light'] .bg-office-sidebar .text-white,
+:root[data-theme='light'] .bg-office-sidebar\/75 .text-white,
+:root[data-theme='light'] .bg-office-sidebar\/80 .text-white,
+:root[data-theme='light'] .bg-office-sidebar\/90 .text-white,
+:root[data-theme='light'] .bg-office-panel .text-white,
+:root[data-theme='light'] .bg-office-panel\/30 .text-white,
+:root[data-theme='light'] .bg-office-panel\/35 .text-white,
+:root[data-theme='light'] .bg-office-panel\/40 .text-white,
+:root[data-theme='light'] .bg-office-panel\/50 .text-white,
+:root[data-theme='light'] .bg-office-panel\/60 .text-white,
+:root[data-theme='light'] .bg-office-panel\/80 .text-white,
+:root[data-theme='light'] .bg-office-panel\/90 .text-white {
+  color: rgb(var(--office-surface-text-rgb)) !important;
+}
+
+:root[data-theme='light'] .border-office-panel,
+:root[data-theme='light'] .border-office-panel\/50,
+:root[data-theme='light'] .border-office-panel\/60,
+:root[data-theme='light'] .border-office-panel\/70 {
+  border-color: rgb(var(--office-border-rgb) / 0.7) !important;
+}
+
+:root[data-theme='light'] .bg-office-panel\/30 {
+  --office-text-rgb: var(--office-surface-text-rgb);
+  background-color: rgb(211 228 252 / 0.42) !important;
+  color: rgb(var(--office-surface-text-rgb)) !important;
+}
+
+:root[data-theme='light'] .bg-office-panel\/40,
+:root[data-theme='light'] .bg-office-panel\/50 {
+  --office-text-rgb: var(--office-surface-text-rgb);
+  background-color: rgb(211 228 252 / 0.62) !important;
+  color: rgb(var(--office-surface-text-rgb)) !important;
+}
+
+:root[data-theme='light'] .bg-office-panel\/60,
+:root[data-theme='light'] .bg-office-panel\/80,
+:root[data-theme='light'] .bg-office-panel\/90 {
+  --office-text-rgb: var(--office-surface-text-rgb);
+  background-color: rgb(211 228 252 / 0.84) !important;
+  color: rgb(var(--office-surface-text-rgb)) !important;
+}
+
+:root[data-theme='light'] .bg-office-active {
+  background-color: #1E5BC8 !important;
+}
+
+:root[data-theme='light'] .bg-office-active\/5,
+:root[data-theme='light'] .bg-office-active\/10,
+:root[data-theme='light'] .bg-office-active\/15,
+:root[data-theme='light'] .bg-office-active\/20,
+:root[data-theme='light'] .bg-office-active\/25,
+:root[data-theme='light'] .bg-office-active\/30,
+:root[data-theme='light'] .bg-office-active\/40,
+:root[data-theme='light'] .bg-office-active\/50,
+:root[data-theme='light'] .bg-office-active\/80 {
+  background-color: rgb(30 91 200 / 0.16) !important;
+}
+
+:root[data-theme='light'] .text-office-text {
+  color: rgb(var(--office-text-rgb)) !important;
+}
+
+:root[data-theme='light'] .text-office-text\/30 {
+  color: rgb(var(--office-text-rgb) / 0.3) !important;
+}
+
+:root[data-theme='light'] .text-office-text\/40 {
+  color: rgb(var(--office-text-rgb) / 0.4) !important;
+}
+
+:root[data-theme='light'] .text-office-text\/50 {
+  color: rgb(var(--office-text-rgb) / 0.5) !important;
+}
+
+:root[data-theme='light'] .text-office-text\/60 {
+  color: rgb(var(--office-text-rgb) / 0.68) !important;
+}
+
+:root[data-theme='light'] .text-office-text\/70 {
+  color: rgb(var(--office-text-rgb) / 0.78) !important;
+}
+
+:root[data-theme='light'] .bg-office-sidebar .text-office-text,
+:root[data-theme='light'] .bg-office-panel .text-office-text,
+:root[data-theme='light'] .bg-office-panel\/30 .text-office-text,
+:root[data-theme='light'] .bg-office-panel\/40 .text-office-text,
+:root[data-theme='light'] .bg-office-panel\/50 .text-office-text,
+:root[data-theme='light'] .bg-office-panel\/60 .text-office-text,
+:root[data-theme='light'] .bg-office-panel\/80 .text-office-text,
+:root[data-theme='light'] .bg-office-panel\/90 .text-office-text {
+  color: rgb(var(--office-surface-text-rgb)) !important;
+}
+
+:root[data-theme='light'] .bg-office-sidebar .text-office-text\/30,
+:root[data-theme='light'] .bg-office-panel .text-office-text\/30,
+:root[data-theme='light'] .bg-office-panel\/30 .text-office-text\/30,
+:root[data-theme='light'] .bg-office-panel\/40 .text-office-text\/30,
+:root[data-theme='light'] .bg-office-panel\/50 .text-office-text\/30,
+:root[data-theme='light'] .bg-office-panel\/60 .text-office-text\/30,
+:root[data-theme='light'] .bg-office-panel\/80 .text-office-text\/30,
+:root[data-theme='light'] .bg-office-panel\/90 .text-office-text\/30 {
+  color: rgb(var(--office-surface-text-rgb) / 0.34) !important;
+}
+
+:root[data-theme='light'] .bg-office-sidebar .text-office-text\/40,
+:root[data-theme='light'] .bg-office-panel .text-office-text\/40,
+:root[data-theme='light'] .bg-office-panel\/30 .text-office-text\/40,
+:root[data-theme='light'] .bg-office-panel\/40 .text-office-text\/40,
+:root[data-theme='light'] .bg-office-panel\/50 .text-office-text\/40,
+:root[data-theme='light'] .bg-office-panel\/60 .text-office-text\/40,
+:root[data-theme='light'] .bg-office-panel\/80 .text-office-text\/40,
+:root[data-theme='light'] .bg-office-panel\/90 .text-office-text\/40 {
+  color: rgb(var(--office-surface-text-rgb) / 0.44) !important;
+}
+
+:root[data-theme='light'] .bg-office-sidebar .text-office-text\/50,
+:root[data-theme='light'] .bg-office-panel .text-office-text\/50,
+:root[data-theme='light'] .bg-office-panel\/30 .text-office-text\/50,
+:root[data-theme='light'] .bg-office-panel\/40 .text-office-text\/50,
+:root[data-theme='light'] .bg-office-panel\/50 .text-office-text\/50,
+:root[data-theme='light'] .bg-office-panel\/60 .text-office-text\/50,
+:root[data-theme='light'] .bg-office-panel\/80 .text-office-text\/50,
+:root[data-theme='light'] .bg-office-panel\/90 .text-office-text\/50 {
+  color: rgb(var(--office-surface-text-rgb) / 0.54) !important;
+}
+
+:root[data-theme='light'] .bg-office-sidebar .text-office-text\/60,
+:root[data-theme='light'] .bg-office-panel .text-office-text\/60,
+:root[data-theme='light'] .bg-office-panel\/30 .text-office-text\/60,
+:root[data-theme='light'] .bg-office-panel\/40 .text-office-text\/60,
+:root[data-theme='light'] .bg-office-panel\/50 .text-office-text\/60,
+:root[data-theme='light'] .bg-office-panel\/60 .text-office-text\/60,
+:root[data-theme='light'] .bg-office-panel\/80 .text-office-text\/60,
+:root[data-theme='light'] .bg-office-panel\/90 .text-office-text\/60 {
+  color: rgb(var(--office-surface-text-rgb) / 0.64) !important;
+}
+
+:root[data-theme='light'] .bg-office-sidebar .text-office-text\/70,
+:root[data-theme='light'] .bg-office-panel .text-office-text\/70,
+:root[data-theme='light'] .bg-office-panel\/30 .text-office-text\/70,
+:root[data-theme='light'] .bg-office-panel\/40 .text-office-text\/70,
+:root[data-theme='light'] .bg-office-panel\/50 .text-office-text\/70,
+:root[data-theme='light'] .bg-office-panel\/60 .text-office-text\/70,
+:root[data-theme='light'] .bg-office-panel\/80 .text-office-text\/70,
+:root[data-theme='light'] .bg-office-panel\/90 .text-office-text\/70 {
+  color: rgb(var(--office-surface-text-rgb) / 0.74) !important;
+}
+
+:root[data-theme='light'] .text-white,
+:root[data-theme='light'] .text-white\/30,
+:root[data-theme='light'] .text-white\/35,
+:root[data-theme='light'] .text-white\/40,
+:root[data-theme='light'] .text-white\/45,
+:root[data-theme='light'] .text-white\/50,
+:root[data-theme='light'] .text-white\/60,
+:root[data-theme='light'] .text-white\/70,
+:root[data-theme='light'] .text-white\/80,
+:root[data-theme='light'] .text-white\/90 {
+  color: #EEF6FF !important;
+}
+
+:root[data-theme='light'] .bg-office-sidebar .text-white,
+:root[data-theme='light'] .bg-office-sidebar\/90 .text-white,
+:root[data-theme='light'] .bg-office-panel .text-white,
+:root[data-theme='light'] .bg-office-panel\/30 .text-white,
+:root[data-theme='light'] .bg-office-panel\/40 .text-white,
+:root[data-theme='light'] .bg-office-panel\/50 .text-white,
+:root[data-theme='light'] .bg-office-panel\/60 .text-white,
+:root[data-theme='light'] .bg-office-panel\/80 .text-white,
+:root[data-theme='light'] .bg-office-panel\/90 .text-white {
+  color: rgb(var(--office-surface-text-rgb)) !important;
+}
+
+:root[data-theme='light'] .border-office-panel,
+:root[data-theme='light'] .border-office-panel\/50,
+:root[data-theme='light'] .border-office-panel\/60,
+:root[data-theme='light'] .border-office-panel\/70 {
+  border-color: rgb(123 171 234 / 0.55) !important;
+}
+
+:root[data-theme='light'] .border-office-active,
+:root[data-theme='light'] .border-office-active\/30,
+:root[data-theme='light'] .border-office-active\/40,
+:root[data-theme='light'] .border-office-active\/50,
+:root[data-theme='light'] .border-office-active\/60 {
+  border-color: rgb(30 91 200 / 0.56) !important;
+}
+
+:root[data-theme='light'] .bg-white\/5,
+:root[data-theme='light'] .bg-white\/10,
+:root[data-theme='light'] .bg-white\/20,
+:root[data-theme='light'] .bg-white\/\[0\.02\],
+:root[data-theme='light'] .bg-white\/\[0\.04\],
+:root[data-theme='light'] .bg-black\/20,
+:root[data-theme='light'] .bg-black\/30,
+:root[data-theme='light'] .bg-black\/40 {
+  background-color: rgb(211 228 252 / 0.42) !important;
+}
+
+:root[data-theme='light'] .border-white\/5,
+:root[data-theme='light'] .border-white\/10,
+:root[data-theme='light'] .border-white\/20,
+:root[data-theme='light'] .border-white\/25 {
+  border-color: rgb(123 171 234 / 0.45) !important;
+}
+
+:root[data-theme='light'] .hover\:bg-office-panel\/50:hover,
+:root[data-theme='light'] .hover\:bg-office-panel\/60:hover,
+:root[data-theme='light'] .hover\:bg-office-panel\/70:hover,
+:root[data-theme='light'] .hover\:bg-office-panel\/80:hover,
+:root[data-theme='light'] .hover\:bg-white\/5:hover,
+:root[data-theme='light'] .hover\:bg-white\/10:hover {
+  background-color: rgb(193 215 248 / 0.9) !important;
+}
+
+:root[data-theme='light'] .hover\:text-white:hover,
+:root[data-theme='light'] .hover\:text-white\/70:hover,
+:root[data-theme='light'] .hover\:text-white\/80:hover {
+  color: #0F3F92 !important;
+}
+
+:root[data-theme='light'] .placeholder-office-text\/40::placeholder,
+:root[data-theme='light'] .placeholder-white\/20::placeholder,
+:root[data-theme='light'] .placeholder-white\/30::placeholder {
+  color: rgb(var(--office-surface-text-rgb) / 0.45) !important;
+}
+
+:root[data-theme='light'] .bg-yellow-500\/5,
+:root[data-theme='light'] .bg-yellow-500\/10,
+:root[data-theme='light'] .bg-yellow-500\/20 {
+  background-color: #EBDCA8 !important;
+}
+
+:root[data-theme='light'] .bg-green-500\/10,
+:root[data-theme='light'] .bg-green-500\/20,
+:root[data-theme='light'] .bg-green-500\/30,
+:root[data-theme='light'] .bg-emerald-500\/5,
+:root[data-theme='light'] .bg-emerald-500\/10,
+:root[data-theme='light'] .bg-emerald-500\/15,
+:root[data-theme='light'] .bg-emerald-500\/20 {
+  background-color: #B9DFC9 !important;
+}
+
+:root[data-theme='light'] .bg-red-500\/10,
+:root[data-theme='light'] .bg-red-500\/20,
+:root[data-theme='light'] .bg-red-500\/30 {
+  background-color: #EAB9C1 !important;
+}
+
+:root[data-theme='light'] .bg-purple-500\/5,
+:root[data-theme='light'] .bg-purple-500\/10,
+:root[data-theme='light'] .bg-purple-500\/20,
+:root[data-theme='light'] .bg-purple-400\/20,
+:root[data-theme='light'] .bg-violet-500\/5,
+:root[data-theme='light'] .bg-violet-500\/10 {
+  background-color: #CEC8EE !important;
+}
+
+:root[data-theme='light'] .bg-blue-500\/20 {
+  background-color: #C7DBF7 !important;
+}
+
+/*
+  Final light theme reset.
+  Built for readability first: neutral blue-gray workspace, #3B82F6 as an accent.
+*/
+:root[data-theme='light'] {
+  --office-bg-rgb: 238 244 250;
+  --office-sidebar-rgb: 248 251 255;
+  --office-panel-rgb: 255 255 255;
+  --office-border-rgb: 209 222 238;
+  --office-text-rgb: 51 65 85;
+  --office-surface-text-rgb: 15 23 42;
+  --office-active-rgb: 59 130 246;
+  --office-accent-rgb: 37 99 235;
+  --office-contrast-rgb: 255 255 255;
+}
+
+:root[data-theme='light'] body {
+  background: #EEF4FA;
+  color: rgb(var(--office-text-rgb));
+}
+
+:root[data-theme='light'] .bg-office-bg {
+  background: #EEF4FA !important;
+}
+
+:root[data-theme='light'] .bg-office-sidebar,
+:root[data-theme='light'] .bg-office-sidebar\/90 {
+  --office-text-rgb: var(--office-surface-text-rgb);
+  background: #F8FBFF !important;
+  color: #0F172A !important;
+  box-shadow: none !important;
+}
+
+:root[data-theme='light'] .bg-office-panel,
+:root[data-theme='light'] .bg-office-panel\/30,
+:root[data-theme='light'] .bg-office-panel\/40,
+:root[data-theme='light'] .bg-office-panel\/50,
+:root[data-theme='light'] .bg-office-panel\/60,
+:root[data-theme='light'] .bg-office-panel\/80,
+:root[data-theme='light'] .bg-office-panel\/90 {
+  --office-text-rgb: var(--office-surface-text-rgb);
+  background: #FFFFFF !important;
+  color: #0F172A !important;
+}
+
+:root[data-theme='light'] .bg-office-panel\/30,
+:root[data-theme='light'] .bg-office-panel\/40,
+:root[data-theme='light'] .bg-office-panel\/50,
+:root[data-theme='light'] .bg-office-panel\/60 {
+  background: #F6FAFF !important;
+}
+
+:root[data-theme='light'] .bg-office-panel\/80,
+:root[data-theme='light'] .bg-office-panel\/90 {
+  background: #FBFDFF !important;
+}
+
+:root[data-theme='light'] .border-office-panel,
+:root[data-theme='light'] .border-office-panel\/50,
+:root[data-theme='light'] .border-office-panel\/60,
+:root[data-theme='light'] .border-office-panel\/70 {
+  border-color: #D1DEEE !important;
+}
+
+:root[data-theme='light'] .bg-office-active {
+  background: #3B82F6 !important;
+}
+
+:root[data-theme='light'] .bg-office-active\/5 {
+  background: rgb(59 130 246 / 0.06) !important;
+}
+
+:root[data-theme='light'] .bg-office-active\/10,
+:root[data-theme='light'] .bg-office-active\/15 {
+  background: rgb(59 130 246 / 0.1) !important;
+}
+
+:root[data-theme='light'] .bg-office-active\/20,
+:root[data-theme='light'] .bg-office-active\/25,
+:root[data-theme='light'] .bg-office-active\/30 {
+  background: rgb(59 130 246 / 0.16) !important;
+}
+
+:root[data-theme='light'] .bg-office-active\/40,
+:root[data-theme='light'] .bg-office-active\/50,
+:root[data-theme='light'] .bg-office-active\/80 {
+  background: rgb(59 130 246 / 0.22) !important;
+}
+
+:root[data-theme='light'] .border-office-active,
+:root[data-theme='light'] .border-office-active\/30,
+:root[data-theme='light'] .border-office-active\/40,
+:root[data-theme='light'] .border-office-active\/50,
+:root[data-theme='light'] .border-office-active\/60 {
+  border-color: rgb(59 130 246 / 0.55) !important;
+}
+
+:root[data-theme='light'] .text-office-text {
+  color: #334155 !important;
+}
+
+:root[data-theme='light'] .text-office-text\/30 {
+  color: rgb(51 65 85 / 0.36) !important;
+}
+
+:root[data-theme='light'] .text-office-text\/40 {
+  color: rgb(51 65 85 / 0.46) !important;
+}
+
+:root[data-theme='light'] .text-office-text\/50 {
+  color: rgb(51 65 85 / 0.58) !important;
+}
+
+:root[data-theme='light'] .text-office-text\/60 {
+  color: rgb(51 65 85 / 0.68) !important;
+}
+
+:root[data-theme='light'] .text-office-text\/70 {
+  color: rgb(51 65 85 / 0.78) !important;
+}
+
+:root[data-theme='light'] .text-office-active,
+:root[data-theme='light'] .text-office-active\/60,
+:root[data-theme='light'] .text-office-active\/70,
+:root[data-theme='light'] .text-office-active\/80 {
+  color: #2563EB !important;
+}
+
+:root[data-theme='light'] .text-office-bg {
+  color: #FFFFFF !important;
+}
+
+:root[data-theme='light'] .text-white,
+:root[data-theme='light'] .text-white\/30,
+:root[data-theme='light'] .text-white\/35,
+:root[data-theme='light'] .text-white\/40,
+:root[data-theme='light'] .text-white\/45,
+:root[data-theme='light'] .text-white\/50,
+:root[data-theme='light'] .text-white\/60,
+:root[data-theme='light'] .text-white\/70,
+:root[data-theme='light'] .text-white\/80,
+:root[data-theme='light'] .text-white\/90 {
+  color: #0F172A !important;
+}
+
+:root[data-theme='light'] .bg-office-active.text-white,
+:root[data-theme='light'] .bg-office-active .text-white,
+:root[data-theme='light'] .bg-office-active.text-office-bg,
+:root[data-theme='light'] .bg-office-active .text-office-bg,
+:root[data-theme='light'] .bg-office-accent.text-white,
+:root[data-theme='light'] .bg-office-accent .text-white {
+  color: #FFFFFF !important;
+}
+
+:root[data-theme='light'] .hover\:text-white:hover,
+:root[data-theme='light'] .hover\:text-white\/70:hover,
+:root[data-theme='light'] .hover\:text-white\/80:hover {
+  color: #2563EB !important;
+}
+
+:root[data-theme='light'] .bg-white\/5,
+:root[data-theme='light'] .bg-white\/10,
+:root[data-theme='light'] .bg-white\/20,
+:root[data-theme='light'] .bg-white\/\[0\.02\],
+:root[data-theme='light'] .bg-white\/\[0\.04\],
+:root[data-theme='light'] .bg-black\/20,
+:root[data-theme='light'] .bg-black\/30,
+:root[data-theme='light'] .bg-black\/40 {
+  background: #F6FAFF !important;
+}
+
+:root[data-theme='light'] .border-white\/5,
+:root[data-theme='light'] .border-white\/10,
+:root[data-theme='light'] .border-white\/20,
+:root[data-theme='light'] .border-white\/25,
+:root[data-theme='light'] .hover\:border-white\/20:hover,
+:root[data-theme='light'] .hover\:border-white\/25:hover {
+  border-color: #D1DEEE !important;
+}
+
+:root[data-theme='light'] .hover\:bg-office-panel\/50:hover,
+:root[data-theme='light'] .hover\:bg-office-panel\/60:hover,
+:root[data-theme='light'] .hover\:bg-office-panel\/70:hover,
+:root[data-theme='light'] .hover\:bg-office-panel\/80:hover,
+:root[data-theme='light'] .hover\:bg-white\/5:hover,
+:root[data-theme='light'] .hover\:bg-white\/10:hover,
+:root[data-theme='light'] .hover\:bg-office-active\/20:hover,
+:root[data-theme='light'] .hover\:bg-office-active\/30:hover,
+:root[data-theme='light'] .hover\:bg-office-active\/40:hover {
+  background: #EAF3FF !important;
+}
+
+:root[data-theme='light'] .hover\:border-office-active:hover,
+:root[data-theme='light'] .hover\:border-office-active\/50:hover {
+  border-color: #3B82F6 !important;
+}
+
+:root[data-theme='light'] .focus\:border-office-active:focus,
+:root[data-theme='light'] .focus\:border-office-active\/60:focus,
+:root[data-theme='light'] .focus\:border-red-400:focus,
+:root[data-theme='light'] .focus\:border-white\/30:focus {
+  border-color: #3B82F6 !important;
+}
+
+:root[data-theme='light'] .placeholder-office-text\/30::placeholder,
+:root[data-theme='light'] .placeholder-office-text\/40::placeholder,
+:root[data-theme='light'] .placeholder-white\/20::placeholder,
+:root[data-theme='light'] .placeholder-white\/30::placeholder {
+  color: rgb(51 65 85 / 0.45) !important;
+}
+
+:root[data-theme='light'] .bg-yellow-500\/5,
+:root[data-theme='light'] .bg-yellow-500\/10,
+:root[data-theme='light'] .bg-yellow-500\/20 {
+  background: #FFF4D6 !important;
+}
+
+:root[data-theme='light'] .text-yellow-100,
+:root[data-theme='light'] .text-yellow-200,
+:root[data-theme='light'] .text-yellow-200\/70,
+:root[data-theme='light'] .text-yellow-300,
+:root[data-theme='light'] .text-yellow-400,
+:root[data-theme='light'] .text-yellow-400\/80 {
+  color: #A15C07 !important;
+}
+
+:root[data-theme='light'] .border-yellow-500\/20,
+:root[data-theme='light'] .border-yellow-500\/30,
+:root[data-theme='light'] .border-yellow-500\/40 {
+  border-color: #F2C45C !important;
+}
+
+:root[data-theme='light'] .bg-green-500\/10,
+:root[data-theme='light'] .bg-green-500\/20,
+:root[data-theme='light'] .bg-green-500\/30,
+:root[data-theme='light'] .bg-emerald-500\/5,
+:root[data-theme='light'] .bg-emerald-500\/10,
+:root[data-theme='light'] .bg-emerald-500\/15,
+:root[data-theme='light'] .bg-emerald-500\/20 {
+  background: #DDF6EA !important;
+}
+
+:root[data-theme='light'] .text-green-300,
+:root[data-theme='light'] .text-green-400,
+:root[data-theme='light'] .text-emerald-300,
+:root[data-theme='light'] .text-emerald-400 {
+  color: #047857 !important;
+}
+
+:root[data-theme='light'] .border-green-500\/50,
+:root[data-theme='light'] .border-emerald-500\/30,
+:root[data-theme='light'] .border-emerald-500\/40,
+:root[data-theme='light'] .border-emerald-500\/50,
+:root[data-theme='light'] .border-emerald-500\/60,
+:root[data-theme='light'] .border-emerald-500\/80 {
+  border-color: #81D6AD !important;
+}
+
+:root[data-theme='light'] .bg-red-500\/10,
+:root[data-theme='light'] .bg-red-500\/20,
+:root[data-theme='light'] .bg-red-500\/30 {
+  background: #FCE3E6 !important;
+}
+
+:root[data-theme='light'] .text-red-300,
+:root[data-theme='light'] .text-red-400 {
+  color: #B4232A !important;
+}
+
+:root[data-theme='light'] .border-red-400,
+:root[data-theme='light'] .border-red-400\/50,
+:root[data-theme='light'] .border-red-400\/60,
+:root[data-theme='light'] .border-red-500\/30,
+:root[data-theme='light'] .border-red-500\/40,
+:root[data-theme='light'] .border-red-500\/50 {
+  border-color: #E89CA3 !important;
+}
+
+:root[data-theme='light'] .bg-purple-500\/5,
+:root[data-theme='light'] .bg-purple-500\/10,
+:root[data-theme='light'] .bg-purple-500\/20,
+:root[data-theme='light'] .bg-purple-400\/20,
+:root[data-theme='light'] .bg-violet-500\/5,
+:root[data-theme='light'] .bg-violet-500\/10 {
+  background: #EEE9FF !important;
+}
+
+:root[data-theme='light'] .text-purple-200,
+:root[data-theme='light'] .text-purple-300,
+:root[data-theme='light'] .text-purple-400,
+:root[data-theme='light'] .text-violet-200,
+:root[data-theme='light'] .text-violet-300 {
+  color: #6D3FC8 !important;
+}
+
+:root[data-theme='light'] .border-purple-400,
+:root[data-theme='light'] .border-purple-400\/60,
+:root[data-theme='light'] .border-purple-500\/30,
+:root[data-theme='light'] .border-purple-500\/40,
+:root[data-theme='light'] .border-violet-500\/20,
+:root[data-theme='light'] .border-violet-500\/30,
+:root[data-theme='light'] .border-violet-500\/40,
+:root[data-theme='light'] .hover\:border-purple-400\/60:hover {
+  border-color: #B7A2ED !important;
+}
+
+:root[data-theme='light'] .bg-blue-500\/20 {
+  background: #E4F0FF !important;
+}
+
+:root[data-theme='light'] .text-blue-300,
+:root[data-theme='light'] .text-blue-400 {
+  color: #2563EB !important;
+}
