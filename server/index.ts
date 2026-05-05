@@ -124,6 +124,16 @@ app.use('/api', (req, res, next) => {
   // 세션 시작 엔드포인트와 OPTIONS는 인증 제외
   if (req.path === '/session/start' || req.method === 'OPTIONS') { next(); return }
 
+  // health check는 인증 없이 항상 허용 (Electron waitForServer 용)
+  if (req.path === '/health') { next(); return }
+
+  // 디바이스 간 상태 동기화: x-sync-password 헤더로 세션 없이 접근 허용
+  // (Electron 앱들이 Render 서버를 공유 상태 저장소로 사용)
+  if (req.path === '/state' && APP_PASSWORD) {
+    const syncPw = req.headers['x-sync-password'] as string | undefined
+    if (syncPw === APP_PASSWORD) { next(); return }
+  }
+
   const token = (req.headers['x-session-token'] as string | undefined)
     ?? (req.query.token as string | undefined)
 
@@ -132,6 +142,11 @@ app.use('/api', (req, res, next) => {
     return
   }
   next()
+})
+
+// 세션 유효성 확인 — 인증 미들웨어 통과 시 항상 200 반환
+app.get('/api/session/validate', (_req, res) => {
+  res.json({ ok: true })
 })
 
 // ─── Notion 자격증명 서버 캐시 ────────────────────────────────────────────────
@@ -762,12 +777,18 @@ app.get('/api/events', (req, res) => {
 })
 
 // ─── 상태 동기화 ─────────────────────────────────────────────────────────────
+// 인메모리 캐시: 프로세스 재시작 전까지 유지 (Render 재배포 후에는 첫 접속 기기가 재업로드)
+let stateMemoryCache: string | null = null
 const STATE_FILE = join(process.cwd(), 'server-state.json')
 
 app.get('/api/state', (_req, res) => {
   try {
+    // 인메모리 캐시 우선 반환
+    if (stateMemoryCache) { res.json({ raw: stateMemoryCache }); return }
+    // 파일 폴백
     if (!existsSync(STATE_FILE)) { res.json({ raw: null }); return }
     const raw = readFileSync(STATE_FILE, 'utf-8')
+    stateMemoryCache = raw
     res.json({ raw })
   } catch {
     res.json({ raw: null })
@@ -778,7 +799,8 @@ app.post('/api/state', express.text({ type: '*/*', limit: '50mb' }), (req, res) 
   try {
     const raw = typeof req.body === 'string' ? req.body : ''
     if (!raw) { res.status(400).json({ error: 'body required' }); return }
-    writeFileSync(STATE_FILE, raw, 'utf-8')
+    stateMemoryCache = raw   // 인메모리 항상 업데이트
+    try { writeFileSync(STATE_FILE, raw, 'utf-8') } catch { /* 파일 실패 시 무시 */ }
     res.json({ ok: true })
   } catch {
     res.status(500).json({ error: '상태 저장 실패' })

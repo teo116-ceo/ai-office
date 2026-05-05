@@ -38,7 +38,7 @@ mkdirSync('dist-electron', { recursive: true })
 
 // 2. Vite 프론트엔드 빌드
 console.log('\n[1/4] Vite 프론트엔드 빌드...')
-run('vite build')
+run('npx vite build')
 
 // 3. Express 서버 번들 (CJS)
 console.log('\n[2/4] Express 서버 번들링...')

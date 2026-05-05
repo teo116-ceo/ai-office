@@ -68,7 +68,7 @@ export async function validateExistingSession(): Promise<boolean> {
   if (!token) return false
 
   try {
-    const res = await fetch('/api/health', {
+    const res = await fetch('/api/session/validate', {
       headers: { 'x-session-token': token },
     })
     if (!res.ok) {
