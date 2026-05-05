@@ -63,7 +63,28 @@
       "Bash(python -c \"from PIL import Image; img = Image.open\\('지음과깃듬 로고.png'\\); print\\(img.size, img.mode\\)\")",
       "Bash(python -c ' *)",
       "Bash(node scripts/build-electron.mjs)",
-      "Bash(npx esbuild *)"
+      "Bash(npx esbuild *)",
+      "Read(//mnt/user-data/uploads/**)",
+      "Read(//mnt/user-data/**)",
+      "Bash(pandoc \"C:\\\\Users\\\\Lenovo\\\\Documents\\\\지금과깃듬 AI Office\\\\agent-output\\\\AI_오피스_사용설명서.docx\" -t markdown)",
+      "PowerShell(cmd /c \"dir \"\"C:\\\\Users\\\\Lenovo\\\\Documents\\\\���ݰ���� AI Office\\\\release\"\" /s\")",
+      "PowerShell(Get-ChildItem \"$env:APPDATA\" | Select-Object Name | Sort-Object Name)",
+      "Bash(gh release *)",
+      "PowerShell(gh release list --repo teo116-ceo/ai-office --limit 5 2>&1)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git tag *)",
+      "Bash(git push *)",
+      "Bash(git commit *)",
+      "Bash(curl -s https://ai-office-kv3b.onrender.com/api/health)",
+      "Bash(gh repo *)",
+      "Bash(curl -s https://api.github.com/repos/teo116-ceo/ai-office)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('visibility:', d.get\\('visibility','N/A'\\)\\); print\\('private:', d.get\\('private','N/A'\\)\\); print\\('message:', d.get\\('message','OK'\\)\\)\")",
+      "Bash(curl -s https://api.github.com/repos/teo116-ceo/ai-office/contents/)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); [print\\(f['name']\\) for f in d] if isinstance\\(d, list\\) else print\\(d.get\\('message','unknown'\\)\\)\")",
+      "Bash(node -e \"const p = require\\('./node_modules/zustand/package.json'\\); console.log\\('zustand:', p.version\\)\")",
+      "Bash(node -e \"console.log\\(JSON.parse\\(require\\('fs'\\).readFileSync\\('package.json','utf8'\\)\\).version\\)\")",
+      "Bash(node -e \"const pkg = require\\('./node_modules/zustand/package.json'\\); console.log\\(pkg.version\\)\")"
     ]
   }
 }
