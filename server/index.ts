@@ -370,6 +370,7 @@ app.post('/api/llm/stream', async (req, res) => {
         model, max_tokens: maxTokens,
         messages: [{ role: 'system', content: system }, ...messages],
         stream: true,
+        stream_options: { include_usage: true },
       })
       let inputTokens = 0
       let outputTokens = 0

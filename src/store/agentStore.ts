@@ -68,6 +68,7 @@ interface AgentStore {
   schedulerSettings: SchedulerSettings
   notionSettings: NotionSettings
   updateAgentStatus: (id: string, status: AgentStatus, message?: string) => void
+  batchUpdateAgentStatuses: (updates: Array<{ id: string; status: AgentStatus; message?: string }>) => void
   updateAgentMessage: (id: string, message?: string) => void
   addMessage: (message: Omit<Message, 'id' | 'timestamp'> & { id?: string }) => string
   updateMessage: (id: string, updates: Partial<Omit<Message, 'id' | 'timestamp'>>) => void
@@ -399,21 +400,20 @@ export const useAgentStore = create<AgentStore>()(persist((set) => ({
   setDailyTokenBudget: (settings) =>
     set((state) => ({ dailyTokenBudget: { ...state.dailyTokenBudget, ...settings } })),
   checkAndConsumeTokenBudget: (tokens) => {
-    // set() 내부에서 원자적으로 검사+소비 — async 사이 race condition 방지
+    // 예산 비활성 또는 초과 시 same-state reference를 반환해 Zustand 구독 알림 생략
     let allowed = true
     set((state) => {
       const budget = state.dailyTokenBudget
-      if (!budget.enabled || budget.limitTokens === 0) return {}
+      if (!budget.enabled || budget.limitTokens === 0) return state  // Object.is → 알림 없음
 
       const today = new Date().toISOString().slice(0, 10)
       if (budget.resetDate !== today) {
-        // 날짜가 바뀌면 리셋 후 허용
         return { dailyTokenBudget: { ...budget, usedToday: tokens, resetDate: today } }
       }
 
       if (budget.usedToday + tokens > budget.limitTokens) {
         allowed = false
-        return {}
+        return state  // Object.is → 알림 없음
       }
 
       return { dailyTokenBudget: { ...budget, usedToday: budget.usedToday + tokens } }
@@ -431,6 +431,25 @@ export const useAgentStore = create<AgentStore>()(persist((set) => ({
           ? Object.fromEntries(Object.entries(state.agentPresenceById).filter(([agentId]) => agentId !== id))
           : state.agentPresenceById,
     })),
+
+  batchUpdateAgentStatuses: (updates) =>
+    set((state) => {
+      const updateMap = new Map(updates.map((u) => [u.id, u]))
+      const removeFromPresence = new Set(
+        updates
+          .filter((u) => u.status === 'working' || u.status === 'thinking' || u.status === 'debating')
+          .map((u) => u.id),
+      )
+      return {
+        agents: state.agents.map((a) => {
+          const u = updateMap.get(a.id)
+          return u ? { ...a, status: u.status, message: u.message } : a
+        }),
+        agentPresenceById: removeFromPresence.size > 0
+          ? Object.fromEntries(Object.entries(state.agentPresenceById).filter(([id]) => !removeFromPresence.has(id)))
+          : state.agentPresenceById,
+      }
+    }),
 
   updateAgentMessage: (id, message) =>
     set((state) => ({

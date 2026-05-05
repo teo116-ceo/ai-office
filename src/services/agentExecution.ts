@@ -186,7 +186,7 @@ async function collectDepartmentContribution({
           (delta) => {
             streamed += delta
             const now = Date.now()
-            if (now - lastStreamUpdate > 50) {
+            if (now - lastStreamUpdate > 200) {
               lastStreamUpdate = now
               useAgentStore.getState().updateMessage(streamingMsgId, {
                 content: `[개별 검토]\n${streamed}`,
@@ -292,7 +292,7 @@ async function summarizeDepartmentTeam({
       (delta) => {
         content += delta
         const now = Date.now()
-        if (now - lastSummaryUpdate > 50) {
+        if (now - lastSummaryUpdate > 200) {
           lastSummaryUpdate = now
           useAgentStore.getState().updateMessage(summaryMsgId, {
             content: `[자동 조합 결과]\n${content}`,

@@ -303,11 +303,13 @@ function triggerDeskActivity() {
   const batchSize = Math.min(randomRange(2, 5), candidates.length)
   const chosen = [...candidates].sort(() => Math.random() - 0.5).slice(0, batchSize)
 
+  const batchUpdates: Array<{ id: string; status: AgentStatus; message?: string }> = []
+
   for (const agent of chosen) {
     const newStatus = chooseRandom(DESK_ACTIVITY_POOL)
     const duration = randomRange(5000, 16000)
 
-    store.updateAgentStatus(agent.id, newStatus, undefined)
+    batchUpdates.push({ id: agent.id, status: newStatus, message: undefined })
 
     const timerId = setTimeout(() => {
       clearDeskRoutine(agent.id)
@@ -320,6 +322,11 @@ function triggerDeskActivity() {
     }, duration)
 
     activeDeskRoutines.set(agent.id, timerId)
+  }
+
+  // 모든 에이전트 상태를 단일 set() 호출로 일괄 업데이트 — React 중첩 렌더 방지
+  if (batchUpdates.length > 0) {
+    store.batchUpdateAgentStatuses(batchUpdates)
   }
 }
 
