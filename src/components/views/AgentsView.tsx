@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useAgentStore } from '@/store/agentStore'
+import { useShallow } from 'zustand/react/shallow'
 import { DEPARTMENTS, DIVISIONS, DepartmentId, Agent } from '@/types'
 import { getAgentRoleCompactLabel, getAgentRoleSummary } from '@/utils/agentRoleMeta'
 
@@ -76,7 +77,13 @@ function getRecommendedModel(agent: Agent): ModelRecommendation {
 }
 
 export default function AgentsView() {
-  const { agents, updateAgent, setActiveView } = useAgentStore()
+  const { agents, updateAgent, setActiveView } = useAgentStore(
+    useShallow((s) => ({
+      agents: s.agents,
+      updateAgent: s.updateAgent,
+      setActiveView: s.setActiveView,
+    }))
+  )
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
   const [editRole, setEditRole] = useState('')

@@ -3,6 +3,7 @@ import { resolveDepartmentFloor } from '@/services/directives'
 import { runChannelMessage, runTask } from '@/services/agentOrchestrator'
 import { prepareUploadedFiles } from '@/services/fileContext'
 import { useAgentStore } from '@/store/agentStore'
+import { useShallow } from 'zustand/react/shallow'
 import { DEPARTMENTS, DepartmentId, FLOORS, Message } from '@/types'
 import type { UploadedFile } from '@/types'
 import MessageContent from '@/components/layout/MessageContent'
@@ -44,7 +45,13 @@ function isMessageInDeptChannel(message: Message, deptId: DepartmentId): boolean
 }
 
 export default function TeamChatView() {
-  const { agents, messages, setActiveView } = useAgentStore()
+  const { agents, messages, setActiveView } = useAgentStore(
+    useShallow((s) => ({
+      agents: s.agents,
+      messages: s.messages,
+      setActiveView: s.setActiveView,
+    }))
+  )
   const [activeDept, setActiveDept] = useState<DepartmentId>('ceo')
   const [mobileView, setMobileView] = useState<'channels' | 'chat'>('channels')
   const [input, setInput] = useState('')

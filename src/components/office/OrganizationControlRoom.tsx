@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { resolveAgentFloor, resolveDepartmentFloor } from '@/services/directives'
 import { useAgentStore } from '@/store/agentStore'
+import { useShallow } from 'zustand/react/shallow'
 import { DEPARTMENTS, FLOORS, type DepartmentId, type FloorId, type Message } from '@/types'
 import {
   ActionPill,
@@ -40,7 +41,16 @@ export default function OrganizationControlRoom({
 }: {
   accentColor: string
 }) {
-  const { currentFloor, agents, tasks, messages, directives, setActiveView } = useAgentStore()
+  const { currentFloor, agents, tasks, messages, directives, setActiveView } = useAgentStore(
+    useShallow((s) => ({
+      currentFloor: s.currentFloor,
+      agents: s.agents,
+      tasks: s.tasks,
+      messages: s.messages,
+      directives: s.directives,
+      setActiveView: s.setActiveView,
+    }))
+  )
 
   const floor = FLOORS[currentFloor]
   const floorDepartments = floor.departments

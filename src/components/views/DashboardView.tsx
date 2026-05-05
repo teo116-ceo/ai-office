@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { resolveDepartmentFloor, resolveAgentFloor } from '@/services/directives'
 import { useAgentStore } from '@/store/agentStore'
+import { useShallow } from 'zustand/react/shallow'
 import { DEPARTMENTS, FLOORS, FloorId, Message, ExecutionLogKind } from '@/types'
 import { formatTime, formatTimeWithSeconds } from '@/utils/dateFormat'
 
@@ -30,7 +31,18 @@ export default function DashboardView() {
     clearExecutionLogs,
     setCurrentFloor,
     setActiveView,
-  } = useAgentStore()
+  } = useAgentStore(
+    useShallow((s) => ({
+      agents: s.agents,
+      tasks: s.tasks,
+      messages: s.messages,
+      currentFloor: s.currentFloor,
+      executionLogs: s.executionLogs,
+      clearExecutionLogs: s.clearExecutionLogs,
+      setCurrentFloor: s.setCurrentFloor,
+      setActiveView: s.setActiveView,
+    }))
+  )
 
   const activeAgents = agents.filter((agent) => agent.status !== 'idle').length
   const inProgressTasks = tasks.filter((task) => task.status === 'in_progress').length

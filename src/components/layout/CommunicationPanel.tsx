@@ -4,6 +4,7 @@ import { runTask, runChannelMessage } from '@/services/agentOrchestrator'
 import { formatFileSize, prepareUploadedFiles } from '@/services/fileContext'
 import { exportMessages, exportMessage } from '@/services/exportService'
 import { useAgentStore } from '@/store/agentStore'
+import { useShallow } from 'zustand/react/shallow'
 import { DEPARTMENTS, FLOORS } from '@/types'
 import type { Agent, Message, UploadedFile } from '@/types'
 import ArchiveTreeView from './ArchiveTreeView'
@@ -21,7 +22,16 @@ export default function CommunicationPanel({ onClose }: CommunicationPanelProps)
   const [isLoading, setIsLoading] = useState(false)
   const [isPreparingFiles, setIsPreparingFiles] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
-  const { messages, agents, currentFloor, tasks, activeThreadId, setActiveThreadId } = useAgentStore()
+  const { messages, agents, currentFloor, tasks, activeThreadId, setActiveThreadId } = useAgentStore(
+    useShallow((s) => ({
+      messages: s.messages,
+      agents: s.agents,
+      currentFloor: s.currentFloor,
+      tasks: s.tasks,
+      activeThreadId: s.activeThreadId,
+      setActiveThreadId: s.setActiveThreadId,
+    }))
+  )
   const activeThread = activeThreadId
     ? tasks.find((t) => t.id === activeThreadId || t.threadId === activeThreadId)
     : null

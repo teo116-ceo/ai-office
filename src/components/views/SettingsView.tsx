@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { validateWebhookUrl } from '@/services/webhookService'
 import { useAgentStore } from '@/store/agentStore'
+import { useShallow } from 'zustand/react/shallow'
 import type { ProviderId } from '@/types'
 import { apiHeaders } from '@/utils/apiHeaders'
 import QuickStatusPanel from './settings/QuickStatusPanel'
@@ -44,7 +45,49 @@ export default function SettingsView() {
     setDebateEnabled,
     clearDirectives, clearMessages, clearTasks,
     resetProviderUsage, setActiveView, setDailyTokenBudget,
-  } = useAgentStore()
+  } = useAgentStore(
+    useShallow((s) => ({
+      themeMode: s.themeMode,
+      fontFamily: s.fontFamily,
+      fontSize: s.fontSize,
+      responseLanguage: s.responseLanguage,
+      memoryEnabled: s.memoryEnabled,
+      memories: s.memories,
+      approvalRequired: s.approvalRequired,
+      approvalPolicies: s.approvalPolicies,
+      webhookSettings: s.webhookSettings,
+      schedulerSettings: s.schedulerSettings,
+      directives: s.directives,
+      usageByProvider: s.usageByProvider,
+      notionSettings: s.notionSettings,
+      triggersEnabled: s.triggersEnabled,
+      triggers: s.triggers,
+      dailyTokenBudget: s.dailyTokenBudget,
+      debateEnabled: s.debateEnabled,
+      setThemeMode: s.setThemeMode,
+      setFontFamily: s.setFontFamily,
+      setFontSize: s.setFontSize,
+      setResponseLanguage: s.setResponseLanguage,
+      setMemoryEnabled: s.setMemoryEnabled,
+      clearMemories: s.clearMemories,
+      setApprovalRequired: s.setApprovalRequired,
+      setApprovalPolicies: s.setApprovalPolicies,
+      setWebhookSettings: s.setWebhookSettings,
+      resetWebhookSettings: s.resetWebhookSettings,
+      setSchedulerSettings: s.setSchedulerSettings,
+      setNotionSettings: s.setNotionSettings,
+      resetNotionSettings: s.resetNotionSettings,
+      setTriggers: s.setTriggers,
+      setTriggersEnabled: s.setTriggersEnabled,
+      setDebateEnabled: s.setDebateEnabled,
+      clearDirectives: s.clearDirectives,
+      clearMessages: s.clearMessages,
+      clearTasks: s.clearTasks,
+      resetProviderUsage: s.resetProviderUsage,
+      setActiveView: s.setActiveView,
+      setDailyTokenBudget: s.setDailyTokenBudget,
+    }))
+  )
 
   const [providerKeyStatus, setProviderKeyStatus] = useState<Record<ProviderId, boolean>>({
     anthropic: false,

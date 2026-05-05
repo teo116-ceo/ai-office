@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { resolveAgentFloor } from '@/services/directives'
 import { useAgentStore } from '@/store/agentStore'
+import { useShallow } from 'zustand/react/shallow'
 import { DEPARTMENTS, FLOORS } from '@/types'
 import { FLOOR_ATMOSPHERE } from './officeLayout'
 import OrganizationControlRoom from './OrganizationControlRoom'
@@ -14,7 +15,13 @@ export default function OfficeCanvas({
   isCommunicationPanelOpen,
   onToggleCommunicationPanel,
 }: OfficeCanvasProps) {
-  const { currentFloor, agents, themeMode } = useAgentStore()
+  const { currentFloor, agents, themeMode } = useAgentStore(
+    useShallow((s) => ({
+      currentFloor: s.currentFloor,
+      agents: s.agents,
+      themeMode: s.themeMode,
+    }))
+  )
 
   const isLight = themeMode !== 'dark'
   const floor = FLOORS[currentFloor]

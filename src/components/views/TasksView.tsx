@@ -6,6 +6,7 @@ import { generateDailyReport, generateDepartmentReport } from '@/services/dailyR
 import { runTask, approveAndFinalize, rejectAndNotify } from '@/services/agentOrchestrator'
 import MessageContent from '@/components/layout/MessageContent'
 import { useAgentStore } from '@/store/agentStore'
+import { useShallow } from 'zustand/react/shallow'
 import { DEPARTMENTS, DIVISIONS, Task, type DepartmentId, type DepartmentResult, type TaskReview } from '@/types'
 import { formatShortDateTime, formatFullDateTime } from '@/utils/dateFormat'
 import { repairLegacyTaskTitle } from '@/utils/taskTitle'
@@ -37,7 +38,16 @@ export default function TasksView() {
     setCurrentFloor,
     setActiveThreadId,
     activeThreadId,
-  } = useAgentStore()
+  } = useAgentStore(
+    useShallow((s) => ({
+      tasks: s.tasks,
+      messages: s.messages,
+      setActiveView: s.setActiveView,
+      setCurrentFloor: s.setCurrentFloor,
+      setActiveThreadId: s.setActiveThreadId,
+      activeThreadId: s.activeThreadId,
+    }))
+  )
   const [filter, setFilter] = useState<TaskFilter>('all')
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const [reportMenuOpen, setReportMenuOpen] = useState(false)

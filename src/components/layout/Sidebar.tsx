@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useAgentStore } from '@/store/agentStore'
+import { useShallow } from 'zustand/react/shallow'
 import { DEPARTMENTS, WorkspaceView } from '@/types'
 import { getAgentRoleCompactLabel } from '@/utils/agentRoleMeta'
 
@@ -14,7 +15,15 @@ const NAV_ITEMS = [
 ] satisfies Array<{ id: WorkspaceView; label: string; icon: string; tooltip: string }>
 
 export default function Sidebar() {
-  const { agents, selectedAgent, activeView, setSelectedAgent, setActiveView } = useAgentStore()
+  const { agents, selectedAgent, activeView, setSelectedAgent, setActiveView } = useAgentStore(
+    useShallow((s) => ({
+      agents: s.agents,
+      selectedAgent: s.selectedAgent,
+      activeView: s.activeView,
+      setSelectedAgent: s.setSelectedAgent,
+      setActiveView: s.setActiveView,
+    }))
+  )
   const [collapsed, setCollapsed] = useState(() => {
     try {
       return localStorage.getItem('sidebar-collapsed') === 'true'

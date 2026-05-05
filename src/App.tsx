@@ -3,6 +3,7 @@ import { startAmbientBehavior, stopAmbientBehavior } from '@/services/agentBehav
 import { startScheduler, stopScheduler, syncSchedulerToServer } from '@/services/schedulerService'
 import { connectSSE } from '@/services/sseService'
 import { useAgentStore } from '@/store/agentStore'
+import { useShallow } from 'zustand/react/shallow'
 import Sidebar from '@/components/layout/Sidebar'
 import Header from '@/components/layout/Header'
 import OfficeCanvas from '@/components/office/OfficeCanvas'
@@ -79,7 +80,16 @@ export default function App() {
   const emailRef = useRef<HTMLInputElement>(null)
   const passwordRef = useRef<HTMLInputElement>(null)
 
-  const { activeView, themeMode, fontFamily, fontSize, schedulerSettings, setActiveView } = useAgentStore()
+  const { activeView, themeMode, fontFamily, fontSize, schedulerSettings, setActiveView } = useAgentStore(
+    useShallow((s) => ({
+      activeView: s.activeView,
+      themeMode: s.themeMode,
+      fontFamily: s.fontFamily,
+      fontSize: s.fontSize,
+      schedulerSettings: s.schedulerSettings,
+      setActiveView: s.setActiveView,
+    }))
+  )
 
   useEffect(() => {
     registerSessionExpiredHandler(() => {

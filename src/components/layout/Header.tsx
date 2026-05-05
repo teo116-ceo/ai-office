@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { resolveAgentFloor, resolveDepartmentFloor } from '@/services/directives'
 import { useAgentStore } from '@/store/agentStore'
+import { useShallow } from 'zustand/react/shallow'
 import { FLOORS, FloorId, Message, Task, WorkspaceView } from '@/types'
 import { formatTime } from '@/utils/dateFormat'
 import { repairLegacyTaskTitle } from '@/utils/taskTitle'
@@ -38,7 +39,20 @@ export default function Header() {
     setCurrentFloor,
     toggleTheme,
     markNotificationsSeen,
-  } = useAgentStore()
+  } = useAgentStore(
+    useShallow((s) => ({
+      agents: s.agents,
+      messages: s.messages,
+      tasks: s.tasks,
+      activeView: s.activeView,
+      currentFloor: s.currentFloor,
+      notificationsSeenAt: s.notificationsSeenAt,
+      setActiveView: s.setActiveView,
+      setCurrentFloor: s.setCurrentFloor,
+      toggleTheme: s.toggleTheme,
+      markNotificationsSeen: s.markNotificationsSeen,
+    }))
+  )
 
   const [search, setSearch] = useState('')
   const [searchHint, setSearchHint] = useState<string | null>(null)

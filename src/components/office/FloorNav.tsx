@@ -1,11 +1,18 @@
 import { resolveAgentFloor } from '@/services/directives'
 import { useAgentStore } from '@/store/agentStore'
+import { useShallow } from 'zustand/react/shallow'
 import { FLOORS, FloorId } from '@/types'
 
 const FLOOR_ORDER: FloorId[] = ['11f', '10f', '9f', '8f', '7f', '6f', '5f', '4f', '3f', '2f', '1f']
 
 export default function FloorNav() {
-  const { currentFloor, setCurrentFloor, agents } = useAgentStore()
+  const { currentFloor, setCurrentFloor, agents } = useAgentStore(
+    useShallow((s) => ({
+      currentFloor: s.currentFloor,
+      setCurrentFloor: s.setCurrentFloor,
+      agents: s.agents,
+    }))
+  )
 
   const agentCountByFloor = (floorId: FloorId) =>
     agents.filter((agent) => resolveAgentFloor(agent) === floorId).length
