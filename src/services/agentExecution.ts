@@ -180,14 +180,19 @@ async function collectDepartmentContribution({
           streaming: true,
         })
         let streamed = ''
+        let lastStreamUpdate = 0
         await callLLMStream(
           { model: agent.model, maxTokens: 8000, system: systemPrompt, messages: msgs },
           (delta) => {
             streamed += delta
-            useAgentStore.getState().updateMessage(streamingMsgId, {
-              content: `[개별 검토]\n${streamed}`,
-              streaming: true,
-            })
+            const now = Date.now()
+            if (now - lastStreamUpdate > 50) {
+              lastStreamUpdate = now
+              useAgentStore.getState().updateMessage(streamingMsgId, {
+                content: `[개별 검토]\n${streamed}`,
+                streaming: true,
+              })
+            }
           },
         )
         content = streamed
@@ -276,6 +281,7 @@ async function summarizeDepartmentTeam({
       streaming: true,
     })
     let content = ''
+    let lastSummaryUpdate = 0
     await callLLMStream(
       {
         model: coordinator.model,
@@ -285,10 +291,14 @@ async function summarizeDepartmentTeam({
       },
       (delta) => {
         content += delta
-        useAgentStore.getState().updateMessage(summaryMsgId, {
-          content: `[자동 조합 결과]\n${content}`,
-          streaming: true,
-        })
+        const now = Date.now()
+        if (now - lastSummaryUpdate > 50) {
+          lastSummaryUpdate = now
+          useAgentStore.getState().updateMessage(summaryMsgId, {
+            content: `[자동 조합 결과]\n${content}`,
+            streaming: true,
+          })
+        }
       },
     )
     useAgentStore.getState().updateMessage(summaryMsgId, {
