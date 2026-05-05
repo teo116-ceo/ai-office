@@ -27,6 +27,16 @@ let pollTimer: ReturnType<typeof setInterval> | null = null
 let isPushing = false
 let lastPushAt = 0
 
+const SYNC_TS_KEY = 'ai-office-sync-ts'
+
+function localSyncedAt(): number {
+  return Number(localStorage.getItem(SYNC_TS_KEY) ?? '0')
+}
+
+function setLocalSyncedAt(ts: number): void {
+  localStorage.setItem(SYNC_TS_KEY, String(ts))
+}
+
 /**
  * 요청 대상에 맞는 인증 헤더 반환
  * Render 모드: x-sync-password 헤더로 세션 없이 /api/state 우회 (server/index.ts 참고)
@@ -47,10 +57,16 @@ export async function pullAndApplyServerState(): Promise<boolean> {
     const res = await fetch(`${API_BASE}/api/state`, { headers })
     if (!res.ok) return false
 
-    const data = await res.json() as { raw: string | null }
+    const data = await res.json() as { raw: string | null; syncedAt?: number }
     if (!data.raw) return false
 
+    // 로컬 상태가 서버보다 더 최신이면 덮어쓰지 않음
+    const serverTs = data.syncedAt ?? 0
+    const localTs = localSyncedAt()
+    if (localTs > serverTs) return false
+
     localStorage.setItem(STORAGE_KEY, data.raw)
+    setLocalSyncedAt(serverTs || Date.now())
     await useAgentStore.persist.rehydrate()
     return true
   } catch {
@@ -66,13 +82,23 @@ export async function pushStateToServer(): Promise<void> {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return
 
+    const now = Date.now()
     const headers = authHeaders()
-    await fetch(`${API_BASE}/api/state`, {
+    const res = await fetch(`${API_BASE}/api/state`, {
       method: 'POST',
-      headers: { 'Content-Type': 'text/plain', ...headers },
+      headers: { 'Content-Type': 'text/plain', 'x-synced-at': String(now), ...headers },
       body: raw,
     })
-    lastPushAt = Date.now()
+    if (res.ok) {
+      const data = await res.json() as { ok: boolean; reason?: string; syncedAt?: number }
+      if (data.ok) {
+        lastPushAt = now
+        setLocalSyncedAt(now)
+      } else if (data.reason === 'stale') {
+        // 서버가 더 최신 — pull로 로컬 갱신
+        await pullAndApplyServerState()
+      }
+    }
   } catch {
     // 네트워크 오류 시 로컬 상태 그대로 유지
   } finally {

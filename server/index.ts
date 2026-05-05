@@ -779,19 +779,31 @@ app.get('/api/events', (req, res) => {
 // ─── 상태 동기화 ─────────────────────────────────────────────────────────────
 // 인메모리 캐시: 프로세스 재시작 전까지 유지 (Render 재배포 후에는 첫 접속 기기가 재업로드)
 let stateMemoryCache: string | null = null
+let stateSyncedAt: number = 0  // 마지막 push 시각 (epoch ms)
 const STATE_FILE = join(process.cwd(), 'server-state.json')
+const STATE_META_FILE = join(process.cwd(), 'server-state-meta.json')
+
+function loadStateMeta(): void {
+  try {
+    if (existsSync(STATE_META_FILE)) {
+      const meta = JSON.parse(readFileSync(STATE_META_FILE, 'utf-8')) as { syncedAt?: number }
+      stateSyncedAt = meta.syncedAt ?? 0
+    }
+  } catch { /* 무시 */ }
+}
+loadStateMeta()
 
 app.get('/api/state', (_req, res) => {
   try {
     // 인메모리 캐시 우선 반환
-    if (stateMemoryCache) { res.json({ raw: stateMemoryCache }); return }
+    if (stateMemoryCache) { res.json({ raw: stateMemoryCache, syncedAt: stateSyncedAt }); return }
     // 파일 폴백
-    if (!existsSync(STATE_FILE)) { res.json({ raw: null }); return }
+    if (!existsSync(STATE_FILE)) { res.json({ raw: null, syncedAt: 0 }); return }
     const raw = readFileSync(STATE_FILE, 'utf-8')
     stateMemoryCache = raw
-    res.json({ raw })
+    res.json({ raw, syncedAt: stateSyncedAt })
   } catch {
-    res.json({ raw: null })
+    res.json({ raw: null, syncedAt: 0 })
   }
 })
 
@@ -799,9 +811,20 @@ app.post('/api/state', express.text({ type: '*/*', limit: '50mb' }), (req, res) 
   try {
     const raw = typeof req.body === 'string' ? req.body : ''
     if (!raw) { res.status(400).json({ error: 'body required' }); return }
-    stateMemoryCache = raw   // 인메모리 항상 업데이트
+
+    // 클라이언트가 보낸 타임스탬프 — 없으면 서버 시각 사용
+    const clientTs = Number(req.headers['x-synced-at'] ?? 0) || Date.now()
+
+    // 서버가 더 최신 상태를 갖고 있으면 덮어쓰지 않음 (시간 오차 2초 허용)
+    if (stateSyncedAt > clientTs + 2000) {
+      res.json({ ok: false, reason: 'stale', syncedAt: stateSyncedAt }); return
+    }
+
+    stateMemoryCache = raw
+    stateSyncedAt = clientTs
     try { writeFileSync(STATE_FILE, raw, 'utf-8') } catch { /* 파일 실패 시 무시 */ }
-    res.json({ ok: true })
+    try { writeFileSync(STATE_META_FILE, JSON.stringify({ syncedAt: clientTs }), 'utf-8') } catch { /* 무시 */ }
+    res.json({ ok: true, syncedAt: clientTs })
   } catch {
     res.status(500).json({ error: '상태 저장 실패' })
   }
