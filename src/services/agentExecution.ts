@@ -6,6 +6,7 @@ import {
   syncDirectiveAgentMessages,
 } from './directives'
 import { callLLMStream } from './multiProviderApi'
+import { setStreamingContent, clearStreamingContent } from './streamingCache'
 import {
   buildTeamPlan,
   formatAssignmentRoster,
@@ -168,7 +169,8 @@ async function collectDepartmentContribution({
           if (tc.name === 'write_file' && tc.input.filename) savedFiles.push(tc.input.filename)
         }
       } else {
-        // 스트리밍: 메시지를 먼저 등록하고 토큰이 올 때마다 실시간 업데이트
+        // 스트리밍: 메시지 플레이스홀더를 Zustand에 1회 등록
+        // 중간 토큰은 streamingCache에만 기록 → Zustand set() 호출 없음 → Error #185 방지
         const streamingMsgId = useAgentStore.getState().addMessage({
           sender: agent.id,
           senderName: formatAgentDisplayName(agent),
@@ -180,23 +182,16 @@ async function collectDepartmentContribution({
           streaming: true,
         })
         let streamed = ''
-        let lastStreamUpdate = 0
         await callLLMStream(
           { model: agent.model, maxTokens: 8000, system: systemPrompt, messages: msgs },
           (delta) => {
             streamed += delta
-            const now = Date.now()
-            if (now - lastStreamUpdate > 200) {
-              lastStreamUpdate = now
-              useAgentStore.getState().updateMessage(streamingMsgId, {
-                content: `[개별 검토]\n${streamed}`,
-                streaming: true,
-              })
-            }
+            setStreamingContent(streamingMsgId, `[개별 검토]\n${streamed}`)
           },
         )
         content = streamed
-        // 스트리밍 완료 — streaming 플래그 제거
+        // 스트리밍 완료 — 캐시 제거 후 Zustand에 최종값 1회 기록
+        clearStreamingContent(streamingMsgId)
         useAgentStore.getState().updateMessage(streamingMsgId, {
           content: `[개별 검토]\n${content}`,
           streaming: false,
@@ -281,7 +276,6 @@ async function summarizeDepartmentTeam({
       streaming: true,
     })
     let content = ''
-    let lastSummaryUpdate = 0
     await callLLMStream(
       {
         model: coordinator.model,
@@ -291,16 +285,10 @@ async function summarizeDepartmentTeam({
       },
       (delta) => {
         content += delta
-        const now = Date.now()
-        if (now - lastSummaryUpdate > 200) {
-          lastSummaryUpdate = now
-          useAgentStore.getState().updateMessage(summaryMsgId, {
-            content: `[자동 조합 결과]\n${content}`,
-            streaming: true,
-          })
-        }
+        setStreamingContent(summaryMsgId, `[자동 조합 결과]\n${content}`)
       },
     )
+    clearStreamingContent(summaryMsgId)
     useAgentStore.getState().updateMessage(summaryMsgId, {
       content: `[자동 조합 결과]\n${content}`,
       streaming: false,

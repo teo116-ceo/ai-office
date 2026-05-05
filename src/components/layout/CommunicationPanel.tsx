@@ -1,4 +1,4 @@
-import { type ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { type ChangeEvent, useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { resolveDepartmentFloor } from '@/services/directives'
 import { runTask, runChannelMessage } from '@/services/agentOrchestrator'
 import { formatFileSize, prepareUploadedFiles } from '@/services/fileContext'
@@ -9,11 +9,18 @@ import { DEPARTMENTS, FLOORS } from '@/types'
 import type { Agent, Message, UploadedFile } from '@/types'
 import ArchiveTreeView from './ArchiveTreeView'
 import MessageContent from './MessageContent'
+import { getStreamingContent, subscribeToStreaming } from '@/services/streamingCache'
 
 const ATTACHMENT_ANALYSIS_PROMPT = '첨부한 파일의 핵심 내용과 구조를 분석해 주세요.'
 
 interface CommunicationPanelProps {
   onClose?: () => void
+}
+
+// 스트리밍 캐시 구독 훅 — rAF 기반이므로 Zustand set() 없이 60fps로 UI 업데이트
+function useStreamingTick() {
+  const [, tick] = useReducer((x: number) => x + 1, 0)
+  useEffect(() => subscribeToStreaming(tick), [])
 }
 
 export default function CommunicationPanel({ onClose }: CommunicationPanelProps) {
@@ -22,6 +29,7 @@ export default function CommunicationPanel({ onClose }: CommunicationPanelProps)
   const [isLoading, setIsLoading] = useState(false)
   const [isPreparingFiles, setIsPreparingFiles] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
+  useStreamingTick() // 스트리밍 캐시 변경 시 이 컴포넌트만 리렌더
   const { messages, agents, currentFloor, tasks, activeThreadId, setActiveThreadId } = useAgentStore(
     useShallow((s) => ({
       messages: s.messages,
@@ -230,7 +238,10 @@ export default function CommunicationPanel({ onClose }: CommunicationPanelProps)
                   </button>
                 )}
               </div>
-              <MessageContent content={message.content} streaming={message.streaming} />
+              <MessageContent
+                content={message.streaming ? (getStreamingContent(message.id) ?? message.content) : message.content}
+                streaming={message.streaming}
+              />
               {message.attachments && message.attachments.length > 0 ? (
                 <div className="mt-3 space-y-2">
                   {message.attachments.map((attachment) => (

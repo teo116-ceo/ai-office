@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { resolveDepartmentFloor } from '@/services/directives'
 import { runChannelMessage, runTask } from '@/services/agentOrchestrator'
 import { prepareUploadedFiles } from '@/services/fileContext'
@@ -7,6 +7,7 @@ import { useShallow } from 'zustand/react/shallow'
 import { DEPARTMENTS, DepartmentId, FLOORS, Message } from '@/types'
 import type { UploadedFile } from '@/types'
 import MessageContent from '@/components/layout/MessageContent'
+import { getStreamingContent, subscribeToStreaming } from '@/services/streamingCache'
 
 const CHANNEL_ORDER: DepartmentId[] = [
   'ceo', 'executive',
@@ -45,6 +46,9 @@ function isMessageInDeptChannel(message: Message, deptId: DepartmentId): boolean
 }
 
 export default function TeamChatView() {
+  const [, streamingTick] = useReducer((x: number) => x + 1, 0)
+  useEffect(() => subscribeToStreaming(streamingTick), [])
+
   const { agents, messages, setActiveView } = useAgentStore(
     useShallow((s) => ({
       agents: s.agents,
@@ -263,7 +267,10 @@ export default function TeamChatView() {
                             : 'rounded-tl-sm bg-office-sidebar border border-office-panel/60 text-office-text'
                         }`}
                       >
-                        <MessageContent content={message.content} streaming={message.streaming} />
+                        <MessageContent
+                          content={message.streaming ? (getStreamingContent(message.id) ?? message.content) : message.content}
+                          streaming={message.streaming}
+                        />
                       </div>
                       {message.attachments && message.attachments.length > 0 && (
                         <div className="flex flex-wrap gap-1">

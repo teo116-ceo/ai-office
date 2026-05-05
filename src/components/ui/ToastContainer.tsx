@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useAgentStore } from '@/store/agentStore'
+import { useShallow } from 'zustand/react/shallow'
 import type { Toast, ToastLevel } from '@/types'
 
 const LEVEL_STYLE: Record<Exclude<ToastLevel, 'approval'>, { bar: string; icon: string; label: string }> = {
@@ -10,11 +11,13 @@ const LEVEL_STYLE: Record<Exclude<ToastLevel, 'approval'>, { bar: string; icon: 
 }
 
 function ApprovalToastItem({ toast }: { toast: Toast }) {
-  const { removeToast, approveTask, rejectTask } = useAgentStore((s) => ({
-    removeToast: s.removeToast,
-    approveTask: s.approveTask,
-    rejectTask: s.rejectTask,
-  }))
+  const { removeToast, approveTask, rejectTask } = useAgentStore(
+    useShallow((s) => ({
+      removeToast: s.removeToast,
+      approveTask: s.approveTask,
+      rejectTask: s.rejectTask,
+    }))
+  )
 
   function handleApprove() {
     if (toast.taskId) approveTask(toast.taskId)
