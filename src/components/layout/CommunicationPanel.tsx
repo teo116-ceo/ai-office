@@ -1,4 +1,4 @@
-import { type ChangeEvent, useCallback, useEffect, useRef, useState } from 'react'
+import { type ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { resolveDepartmentFloor } from '@/services/directives'
 import { runTask, runChannelMessage } from '@/services/agentOrchestrator'
 import { formatFileSize, prepareUploadedFiles } from '@/services/fileContext'
@@ -42,9 +42,12 @@ export default function CommunicationPanel({ onClose }: CommunicationPanelProps)
   }
   const floor = FLOORS[currentFloor]
   const hasChannel = currentFloor === '2f' || floor.departments.length > 0
-  const visibleMessages = hasChannel
-    ? messages.filter((message) => isMessageVisibleOnFloor(message, currentFloor, floor.departments, agents))
-    : []
+  const visibleMessages = useMemo(
+    () => hasChannel
+      ? messages.filter((message) => isMessageVisibleOnFloor(message, currentFloor, floor.departments, agents))
+      : [],
+    [hasChannel, messages, currentFloor, floor.departments, agents],
+  )
   const floorTeamsLabel = currentFloor === '2f'
     ? '대회의실, 중회의실, 소회의실'
     : floor.departments.map((deptId) => DEPARTMENTS[deptId].name).join(', ')

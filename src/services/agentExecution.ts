@@ -302,15 +302,6 @@ async function summarizeDepartmentTeam({
     }
 
     const summary = { agent: coordinator, content }
-    useAgentStore.getState().addMessage({
-      sender: coordinator.id,
-      senderName: formatAgentDisplayName(coordinator),
-      content: `[자동 조합 결과]\n${content}`,
-      type: 'result',
-      taskId,
-      departmentIds: [teamPlan.departmentId],
-      channelFloorId,
-    })
     useAgentStore.getState().updateAgentStatus(coordinator.id, 'idle')
     return { summary, interrupted: false }
   } catch {
