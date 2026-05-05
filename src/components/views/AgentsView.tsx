@@ -88,10 +88,10 @@ export default function AgentsView() {
   const inlineInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    if (window.innerWidth >= 768) {
+    if (window.innerWidth >= 768 && selectedId === null) {
       setSelectedId(agents[0]?.id ?? null)
     }
-  }, [agents])
+  }, [agents, selectedId])
 
   const selectedAgent = agents.find((agent) => agent.id === selectedId) ?? null
   const isDirty = selectedAgent !== null && (
