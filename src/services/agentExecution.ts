@@ -190,12 +190,14 @@ async function collectDepartmentContribution({
           },
         )
         content = streamed
-        // 스트리밍 완료 — 캐시 제거 후 Zustand에 최종값 1회 기록
-        clearStreamingContent(streamingMsgId)
+        // 스트리밍 완료 — Zustand에 최종값 먼저 기록 후 캐시 제거
+        // (순서 중요: 캐시를 먼저 지우면 rAF이 Zustand 업데이트보다 먼저 실행될 때
+        //  streaming=true 상태에서 캐시가 없어 빈 화면이 순간 노출되는 문제 발생)
         useAgentStore.getState().updateMessage(streamingMsgId, {
           content: `[개별 검토]\n${content}`,
           streaming: false,
         })
+        clearStreamingContent(streamingMsgId)
       }
 
       if (shouldInterruptAgentWork(agent.id, directiveRevisionAtStart)) {
@@ -288,11 +290,11 @@ async function summarizeDepartmentTeam({
         setStreamingContent(summaryMsgId, `[자동 조합 결과]\n${content}`)
       },
     )
-    clearStreamingContent(summaryMsgId)
     useAgentStore.getState().updateMessage(summaryMsgId, {
       content: `[자동 조합 결과]\n${content}`,
       streaming: false,
     })
+    clearStreamingContent(summaryMsgId)
 
     if (shouldInterruptAgentWork(coordinator.id, directiveRevisionAtStart)) {
       syncDirectiveAgentMessages()
