@@ -188,6 +188,100 @@ export async function rejectAndNotify(taskId: string, reason?: string): Promise<
   }
 }
 
+// ── 부서별 관련 부서 맵 ────────────────────────────────────────────────────────
+const RELATED_DEPTS: Partial<Record<DepartmentId, DepartmentId[]>> = {
+  sales:       ['legal', 'finance'],
+  b2g:         ['legal', 'compliance'],
+  expertsales: ['sales', 'support'],
+  global:      ['sales', 'legal'],
+  marketing:   ['planning', 'sales'],
+  presales:    ['sales', 'hr'],
+  trend:       ['marketing', 'planning'],
+  development: ['qa', 'devops'],
+  qa:          ['development', 'devops'],
+  devops:      ['development', 'qa'],
+  security:    ['compliance', 'development'],
+  planning:    ['development', 'sales'],
+  compliance:  ['legal', 'development'],
+  finance:     ['management', 'legal'],
+  hr:          ['management', 'legal'],
+  legal:       ['management', 'compliance'],
+  management:  ['finance', 'hr'],
+  support:     ['customer', 'hr'],
+  customer:    ['support', 'sales'],
+  ceo:         [],
+  executive:   [],
+}
+
+/**
+ * 관련 부서가 팀 채널에 짧게 반응하도록 비동기 트리거
+ * - 주담당 부서 응답 후 1~2개 관련 부서가 자신의 관점에서 2~3문장 코멘트
+ * - 같은 채널(channelFloorId)에 메시지를 남김
+ */
+async function fireRelatedReactions(
+  mainDeptId: DepartmentId,
+  userMessage: string,
+  mainResult: string,
+  channelFloorId: import('@/types').FloorId,
+  taskId: string,
+): Promise<void> {
+  const related = (RELATED_DEPTS[mainDeptId] ?? []).slice(0, 2)
+  if (related.length === 0) return
+
+  const store = useAgentStore.getState()
+
+  for (const relDeptId of related) {
+    // 약간의 텀을 두어 자연스럽게 순차 등장
+    await new Promise((r) => setTimeout(r, 1200))
+
+    const relAgent = store.agents.find((a) => a.departmentId === relDeptId)
+    if (!relAgent) continue
+
+    const dept = DEPARTMENTS[relDeptId]
+    const systemPrompt = `당신은 주식회사 지음과깃듬 ${dept.name}의 ${relAgent.name}입니다.
+팀 채팅에서 동료 부서의 업무 결과를 보고 당신의 전문 영역 관점에서 짧게 코멘트합니다.
+- 반드시 2~3문장 이내
+- 구어체, 자연스러운 직장 동료 말투
+- 불필요한 인사말 없이 바로 핵심만
+- 필요하면 협조 요청이나 추가 확인 사항을 제안`
+
+    const userPrompt = `[팀 채팅 상황]
+사용자 요청: ${userMessage.slice(0, 300)}
+
+[${DEPARTMENTS[mainDeptId].name}팀 응답 요약]
+${mainResult.slice(0, 600)}
+
+위 내용에 대해 ${dept.name} 입장에서 짧게 코멘트해주세요.`
+
+    try {
+      store.updateAgentStatus(relAgent.id, 'thinking', '채팅 내용 검토 중...')
+
+      const comment = await callLLM({
+        model: relAgent.model ?? 'claude-3-5-haiku-20241022',
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }],
+        maxTokens: 200,
+      })
+
+      if (comment.trim()) {
+        store.addMessage({
+          sender: relAgent.id,
+          senderName: `${relAgent.name} (${dept.name})`,
+          content: comment.trim(),
+          type: 'result',
+          taskId,
+          departmentIds: [mainDeptId],
+          channelFloorId,
+        })
+      }
+    } catch (e) {
+      console.warn(`[fireRelatedReactions] ${relDeptId} 반응 실패:`, e)
+    } finally {
+      store.updateAgentStatus(relAgent.id, 'idle')
+    }
+  }
+}
+
 // 특정 부서 채널에 직접 메시지를 보내고 해당 팀에게만 응답을 받는 함수
 export async function runChannelMessage(
   deptId: DepartmentId,
@@ -306,6 +400,13 @@ export async function runChannelMessage(
   if (teamResult.summary && result) {
     evaluateAndFireTriggers(taskId, [deptId], result, teamResult.savedFiles ?? []).catch((e: unknown) => {
       console.warn('[agentOrchestrator] 채널 메시지 트리거 평가 실패:', e)
+    })
+  }
+
+  // 관련 부서 자동 반응 (비동기 — 주담당 응답 후 자연스럽게 등장)
+  if (teamResult.summary && result) {
+    fireRelatedReactions(deptId, trimmed, result, channelFloorId, taskId).catch((e: unknown) => {
+      console.warn('[agentOrchestrator] 관련 부서 반응 실패:', e)
     })
   }
 }

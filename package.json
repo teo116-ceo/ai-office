@@ -1,7 +1,7 @@
 {
   "name": "ai-office",
   "private": true,
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "TEoVerse AI 오피스 — 지음과깃듬 AI 에이전트 시스템",
   "author": "TEoVerse",
   "type": "module",
