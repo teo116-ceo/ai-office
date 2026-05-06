@@ -35,37 +35,37 @@ const ROLE_STREAM_LIBRARY = [
   {
     id: 'coordination',
     keywords: ['팀장', '리더', '리드', '총괄', '대표', 'Head', 'Lead'],
-    task: '우선순위, 의사결정 기준, 부서 실행 순서를 정리합니다.',
-    debate: '부서 입장, 핵심 쟁점, 결론 방향을 정리합니다.',
+    task: '우선순위·의사결정 기준·부서 실행 순서를 확정하여 지시하라.',
+    debate: '부서 공식 입장과 핵심 주장을 명확히 제시하라.',
   },
   {
     id: 'strategy',
     keywords: ['전략', '포트폴리오', '비서', '일정'],
-    task: '사업 우선순위, 일정 제약, 대표 의사결정 포인트를 정리합니다.',
+    task: '사업 우선순위·일정 제약·대표 의사결정 포인트를 확정하여 제출하라.',
     debate: '전략 적합성과 실행 타이밍 관점의 근거를 제시합니다.',
   },
   {
     id: 'research',
     keywords: ['R&D', '연구', '기질', '창업자', '조직'],
-    task: '진단 주제, 검증 단계, 연구 리스크를 정리합니다.',
+    task: '진단 주제·검증 단계·연구 리스크를 분석하여 결론과 다음 단계를 제출하라.',
     debate: '진단 타당성과 상용화 가능성 관점의 근거를 제시합니다.',
   },
   {
     id: 'data',
     keywords: ['데이터', '통계', '리포트', '프로파일'],
-    task: '데이터 구조, 지표, 리포트 자동화 영향을 정리합니다.',
+    task: '데이터 구조·지표·리포트 자동화 설계를 즉시 작성하여 제출하라.',
     debate: '데이터 해석 가능성과 지표 신뢰도 관점의 근거를 제시합니다.',
   },
   {
     id: 'development',
     keywords: ['개발', '자동화', '파이프라인', '도구', 'API'],
-    task: '구현 구조, 연동 범위, 기술 작업 분해를 정리합니다.',
+    task: '구현 코드·연동 설계·기술 작업 분해를 즉시 작성하여 제출하라.',
     debate: '기술 실현 가능성과 유지보수 비용 관점의 근거를 제시합니다.',
   },
   {
     id: 'qa',
     keywords: ['오류', '검증', '테스트', '트래킹'],
-    task: '오류 재현, 검증 기준, 우선순위 처리안을 정리합니다.',
+    task: '오류 재현 절차·검증 결론·처리안을 즉시 작성하여 제출하라.',
     debate: '품질 리스크와 검증 필요성 관점의 근거를 제시합니다.',
   },
   {
@@ -187,7 +187,7 @@ const DEFAULT_STREAMS: Record<DepartmentId, Record<CollaborationMode, Array<{ id
   },
   devops: {
     task: [
-      { id: 'ops-workflow', text: '운영 자동화 흐름과 반복 업무 제거 포인트를 정리합니다.' },
+      { id: 'ops-workflow', text: '운영 자동화 스크립트·절차·체크리스트를 즉시 완성하여 제출하라.' },
       { id: 'ops-runtime', text: '운영 안정성과 백업 영향을 정리합니다.' },
       { id: 'ops-recovery', text: '복구, 권한, 알림 절차를 정리합니다.' },
     ],
@@ -223,7 +223,7 @@ const DEFAULT_STREAMS: Record<DepartmentId, Record<CollaborationMode, Array<{ id
   },
   sales: {
     task: [
-      { id: 'sales-value', text: '고객 가치와 세일즈 메시지를 정리합니다.' },
+      { id: 'sales-value', text: '고객 가치·세일즈 메시지·제안서 초안을 즉시 작성하여 제출하라.' },
       { id: 'sales-pipeline', text: '리드, 계약, 라이선스 진행 상태를 정리합니다.' },
       { id: 'sales-position', text: '제안 포지션과 반론 대응 논리를 정리합니다.' },
     ],
@@ -247,7 +247,7 @@ const DEFAULT_STREAMS: Record<DepartmentId, Record<CollaborationMode, Array<{ id
   },
   marketing: {
     task: [
-      { id: 'mkt-message', text: '메시지와 콘텐츠 기획을 정리합니다.' },
+      { id: 'mkt-message', text: '완성된 카피·콘텐츠·캠페인 기획을 즉시 작성하여 제출하라.' },
       { id: 'mkt-audience', text: '타겟 고객과 전달 채널을 정리합니다.' },
       { id: 'mkt-risk', text: '커뮤니케이션 리스크와 보완점을 정리합니다.' },
     ],
@@ -357,9 +357,9 @@ const DEFAULT_STREAMS: Record<DepartmentId, Record<CollaborationMode, Array<{ id
 
 const GENERIC_STREAMS: Record<CollaborationMode, Array<{ id: string; text: string }>> = {
   task: [
-    { id: 'generic-scope', text: '핵심 요구사항과 범위를 정리합니다.' },
-    { id: 'generic-risk', text: '주요 리스크와 확인 필요사항을 정리합니다.' },
-    { id: 'generic-next', text: '바로 실행할 다음 단계와 의존성을 정리합니다.' },
+    { id: 'generic-scope', text: '핵심 요구사항을 분석하고 완성된 결과물을 즉시 제출하라.' },
+    { id: 'generic-risk', text: '리스크를 분석하고 해결안을 포함한 결과물을 즉시 제출하라.' },
+    { id: 'generic-next', text: '지금 바로 실행 가능한 다음 단계와 결과물을 완성하여 제출하라.' },
   ],
   debate: [
     { id: 'generic-claim', text: '주장의 핵심 논리와 근거를 정리합니다.' },

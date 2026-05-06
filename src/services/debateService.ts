@@ -277,10 +277,10 @@ export async function synthesizeDeptOpinions(
     const synthesis = await callLLM({
       model: ceo?.model ?? 'claude-sonnet-4-6',
       maxTokens: 1200,
-      system: '당신은 다수 부서의 의견을 중립적으로 비교·정리하는 역할입니다. 각 부서 입장의 공통점, 충돌 지점, 핵심 쟁점을 간결하게 요약하세요.',
+      system: '당신은 다수 부서의 의견을 종합하여 최종 결론을 내리는 역할입니다. 공통점·충돌 지점·핵심 쟁점을 분석하고 지금 바로 실행 가능한 결론과 다음 액션을 완성하여 제출하라.',
       messages: [{
         role: 'user',
-        content: `주제: ${topic}\n\n${lines.join('\n\n')}\n\n위 부서별 의견을 비교하여 핵심 쟁점과 합의 가능한 방향을 정리하세요.`,
+        content: `주제: ${topic}\n\n${lines.join('\n\n')}\n\n위 부서별 의견을 분석하여 핵심 쟁점과 최종 결론을 지금 바로 완성하여 제출하라. 합의 방향과 실행 액션까지 확정하라.`,
       }],
     })
 
@@ -350,7 +350,7 @@ function buildIndividualDebatePrompt(
       `토론 주제: ${topic}`,
       '[자동 분업 영역]',
       assignment.workstream,
-      '위 역할 기준으로 부서 입장에 보탤 수 있는 핵심 논리를 정리하세요.',
+      '위 역할 기준으로 지금 바로 핵심 주장과 근거를 작성하여 제출하라. 방향 제시가 아닌 확정된 입장을 내놓아라.',
     ].join('\n\n')
   }
 
@@ -359,7 +359,7 @@ function buildIndividualDebatePrompt(
       `토론 주제: ${topic}`,
       '[자동 분업 영역]',
       assignment.workstream,
-      '위 역할 기준으로 부서 입장에 보탤 수 있는 핵심 논리를 정리하세요.',
+      '위 역할 기준으로 지금 바로 핵심 주장과 근거를 작성하여 제출하라. 방향 제시가 아닌 확정된 입장을 내놓아라.',
     ].join('\n\n')
   }
 
@@ -369,7 +369,7 @@ function buildIndividualDebatePrompt(
     assignment.workstream,
     `상대 부서 요약 의견 (${DEPARTMENTS[counterOpinion.dept].name} / ${counterOpinion.agentName})`,
     counterOpinion.content,
-    '위 의견에 반론하고 자신의 역할 영역 기준으로 입장을 보강하세요.',
+    '위 의견의 약점을 짚고 자신의 역할 영역 기준으로 반론을 지금 바로 작성하여 제출하라. 모호한 표현 없이 확정된 반론을 내놓아라.',
   ].join('\n\n')
 }
 
@@ -393,8 +393,8 @@ function buildTeamDebatePrompt(
     ...contributions.map((item, index) => `${index + 1}. ${item.agent.name} (${item.agent.role})\n${item.content}`),
     '[정리 요청]',
     round === '반론'
-      ? `${DEPARTMENTS[teamPlan.departmentId].name} 팀의 공식 반론으로 정리하세요. 공격 포인트, 유지할 입장, 양보 불가 조건을 포함하세요.`
-      : `${DEPARTMENTS[teamPlan.departmentId].name} 팀의 공식 초기 입장으로 정리하세요. 핵심 주장, 판단 근거, 전제를 분명히 드러내세요.`,
+      ? `${DEPARTMENTS[teamPlan.departmentId].name} 팀의 공식 반론을 지금 바로 완성하여 제출하라. 공격 포인트, 유지 입장, 양보 불가 조건을 포함한 확정 반론을 내놓아라.`
+      : `${DEPARTMENTS[teamPlan.departmentId].name} 팀의 공식 초기 입장을 지금 바로 완성하여 제출하라. 핵심 주장, 판단 근거, 전제를 확정된 형태로 내놓아라.`,
   ].filter(Boolean).join('\n\n')
 }
 
@@ -418,8 +418,8 @@ function buildDebateSystemPrompt(
     AGENT_GROUND_RULES,
     directiveContext,
     round === '반론'
-      ? '상대 부서 논리의 약점을 짚되 과장하지 말고, 조건과 근거를 함께 적으세요.'
-      : '명확한 주장과 근거를 짧고 밀도 있게 정리하세요.',
+      ? '상대 부서 논리의 약점을 짚고 지금 바로 반론을 완성하여 제출하라. 조건과 근거를 포함한 확정 반론을 내놓아라.'
+      : '명확한 주장과 근거를 지금 바로 작성하여 제출하라. 요약이 아닌 확정된 입장을 내놓아라.',
   ].filter(Boolean).join('\n\n')
 }
 
