@@ -1,6 +1,11 @@
 import { unzipSync } from 'fflate'
+import * as XLSX from 'xlsx'
 import type { ArchiveEntry, UploadedFile } from '@/types'
 import { MAX_SERVER_ZIP_BYTES, analyzeZipOnServer } from './zipAnalysisApi'
+
+const EXCEL_EXTENSIONS = new Set(['xlsx', 'xls', 'xlsm', 'xlsb'])
+const DOCX_EXTENSIONS = new Set(['docx', 'docm'])
+const PPTX_EXTENSIONS = new Set(['pptx', 'pptm'])
 
 const TEXT_EXTENSIONS = new Set([
   'txt', 'md', 'markdown', 'json', 'jsonl', 'csv', 'tsv', 'xml', 'html', 'htm',
@@ -57,6 +62,26 @@ export async function readUploadedFile(file: File): Promise<UploadedFile> {
       promptContext: `File: ${file.name}\nStatus: 차단됨 — 실행 파일은 분석 대상에서 제외됩니다.`,
       warnings: ['blocked-executable'],
     }
+  }
+
+  if (EXCEL_EXTENSIONS.has(extension)) {
+    const bytes = new Uint8Array(await file.arrayBuffer())
+    return buildExcelAttachment(base, bytes)
+  }
+
+  if (DOCX_EXTENSIONS.has(extension)) {
+    const bytes = new Uint8Array(await file.arrayBuffer())
+    return buildDocxAttachment(base, bytes)
+  }
+
+  if (PPTX_EXTENSIONS.has(extension)) {
+    const bytes = new Uint8Array(await file.arrayBuffer())
+    return buildPptxAttachment(base, bytes)
+  }
+
+  if (extension === 'pdf') {
+    const bytes = new Uint8Array(await file.arrayBuffer())
+    return await buildPdfAttachment(base, bytes)
   }
 
   if (ZIP_EXTENSIONS.has(extension) || file.type.includes('zip')) {
@@ -417,4 +442,271 @@ function attachmentTypeLabel(kind: UploadedFile['kind']): string {
   if (kind === 'archive') return 'archive'
   if (kind === 'binary') return 'binary'
   return 'text'
+}
+
+const MAX_EXCEL_ROWS_PER_SHEET = 200
+const MAX_EXCEL_TOTAL_CHARS = 16_000
+
+function buildExcelAttachment(
+  base: Pick<UploadedFile, 'id' | 'name' | 'size' | 'mimeType'>,
+  bytes: Uint8Array,
+): UploadedFile {
+  try {
+    const workbook = XLSX.read(bytes, { type: 'array' })
+    const sheetNames = workbook.SheetNames
+
+    const sheetBlocks: string[] = []
+    let totalChars = 0
+    let truncated = false
+
+    for (const sheetName of sheetNames) {
+      if (totalChars >= MAX_EXCEL_TOTAL_CHARS) { truncated = true; break }
+      const sheet = workbook.Sheets[sheetName]
+      const rows: string[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' })
+      if (rows.length === 0) continue
+
+      const sliced = rows.slice(0, MAX_EXCEL_ROWS_PER_SHEET)
+      const csvLines = sliced.map((row) =>
+        row.map((cell) => String(cell ?? '').replace(/\t/g, ' ')).join('\t')
+      )
+
+      if (rows.length > MAX_EXCEL_ROWS_PER_SHEET) truncated = true
+
+      const block = `[시트: ${sheetName}]\n${csvLines.join('\n')}`
+      const remaining = MAX_EXCEL_TOTAL_CHARS - totalChars
+      const clipped = clipText(block, remaining)
+      sheetBlocks.push(clipped)
+      totalChars += clipped.length
+      if (clipped.length < block.length) { truncated = true; break }
+    }
+
+    const note = truncated ? '(내용이 길어 일부 생략됨)' : ''
+    const summary = `Excel 파일 — 시트 ${sheetNames.length}개 (${sheetNames.join(', ')})${note ? ' ' + note : ''}`
+
+    return {
+      ...base,
+      kind: 'text',
+      summary,
+      promptContext: [
+        `File: ${base.name}`,
+        'Type: Excel spreadsheet',
+        `Size: ${formatFileSize(base.size)}`,
+        `Sheets: ${sheetNames.join(', ')}`,
+        note ? `Note: ${note}` : '',
+        '',
+        sheetBlocks.join('\n\n'),
+      ].filter(Boolean).join('\n'),
+      warnings: truncated ? ['text-truncated'] : undefined,
+    }
+  } catch {
+    return {
+      ...base,
+      kind: 'binary',
+      summary: 'Excel 파일을 파싱하는 데 실패했습니다.',
+      promptContext: [
+        `File: ${base.name}`,
+        'Type: Excel spreadsheet',
+        `Size: ${formatFileSize(base.size)}`,
+        'Status: 파일을 읽을 수 없었습니다.',
+      ].join('\n'),
+      warnings: ['binary-metadata-only'],
+    }
+  }
+}
+
+// ── XML 텍스트 추출 헬퍼 ──────────────────────────────────────────────────────
+
+function extractXmlText(xmlString: string): string {
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(xmlString, 'application/xml')
+  return doc.documentElement.textContent?.replace(/\s+/g, ' ').trim() ?? ''
+}
+
+// ── docx ────────────────────────────────────────────────────────────────────
+
+const MAX_DOCX_CHARS = 16_000
+
+function buildDocxAttachment(
+  base: Pick<UploadedFile, 'id' | 'name' | 'size' | 'mimeType'>,
+  bytes: Uint8Array,
+): UploadedFile {
+  try {
+    const files = unzipSync(bytes)
+    const docXml = files['word/document.xml']
+    if (!docXml) throw new Error('word/document.xml not found')
+
+    const raw = new TextDecoder().decode(docXml)
+    const text = extractXmlText(raw)
+    const excerpt = clipText(text, MAX_DOCX_CHARS)
+    const truncated = excerpt.length < text.length
+
+    return {
+      ...base,
+      kind: 'text',
+      summary: `Word 문서 — 텍스트 ${text.length.toLocaleString()}자${truncated ? ' (일부 생략)' : ''}`,
+      promptContext: [
+        `File: ${base.name}`,
+        'Type: Word document (docx)',
+        `Size: ${formatFileSize(base.size)}`,
+        truncated ? 'Note: 내용이 길어 일부 생략됨' : '',
+        '',
+        excerpt,
+      ].filter(Boolean).join('\n'),
+      warnings: truncated ? ['text-truncated'] : undefined,
+    }
+  } catch {
+    return {
+      ...base,
+      kind: 'binary',
+      summary: 'Word 문서를 파싱하는 데 실패했습니다.',
+      promptContext: [
+        `File: ${base.name}`,
+        'Type: Word document (docx)',
+        `Size: ${formatFileSize(base.size)}`,
+        'Status: 파일을 읽을 수 없었습니다.',
+      ].join('\n'),
+      warnings: ['binary-metadata-only'],
+    }
+  }
+}
+
+// ── pptx ────────────────────────────────────────────────────────────────────
+
+const MAX_PPTX_CHARS = 16_000
+const MAX_PPTX_SLIDES = 50
+
+function buildPptxAttachment(
+  base: Pick<UploadedFile, 'id' | 'name' | 'size' | 'mimeType'>,
+  bytes: Uint8Array,
+): UploadedFile {
+  try {
+    const files = unzipSync(bytes)
+    const slideKeys = Object.keys(files)
+      .filter((k) => /^ppt\/slides\/slide\d+\.xml$/.test(k))
+      .sort((a, b) => {
+        const numA = parseInt(a.match(/\d+/)?.[0] ?? '0', 10)
+        const numB = parseInt(b.match(/\d+/)?.[0] ?? '0', 10)
+        return numA - numB
+      })
+
+    const totalSlides = slideKeys.length
+    const sliced = slideKeys.slice(0, MAX_PPTX_SLIDES)
+    const blocks: string[] = []
+    let totalChars = 0
+    let truncated = totalSlides > MAX_PPTX_SLIDES
+
+    for (const [idx, key] of sliced.entries()) {
+      if (totalChars >= MAX_PPTX_CHARS) { truncated = true; break }
+      const xml = new TextDecoder().decode(files[key])
+      const text = extractXmlText(xml)
+      if (!text) continue
+      const block = `[슬라이드 ${idx + 1}]\n${text}`
+      const remaining = MAX_PPTX_CHARS - totalChars
+      const clipped = clipText(block, remaining)
+      blocks.push(clipped)
+      totalChars += clipped.length
+      if (clipped.length < block.length) { truncated = true; break }
+    }
+
+    return {
+      ...base,
+      kind: 'text',
+      summary: `PowerPoint — 슬라이드 ${totalSlides}장${truncated ? ' (일부 생략)' : ''}`,
+      promptContext: [
+        `File: ${base.name}`,
+        'Type: PowerPoint presentation (pptx)',
+        `Size: ${formatFileSize(base.size)}`,
+        `Slides: ${totalSlides}장`,
+        truncated ? 'Note: 내용이 길어 일부 생략됨' : '',
+        '',
+        blocks.join('\n\n'),
+      ].filter(Boolean).join('\n'),
+      warnings: truncated ? ['text-truncated'] : undefined,
+    }
+  } catch {
+    return {
+      ...base,
+      kind: 'binary',
+      summary: 'PowerPoint 파일을 파싱하는 데 실패했습니다.',
+      promptContext: [
+        `File: ${base.name}`,
+        'Type: PowerPoint presentation (pptx)',
+        `Size: ${formatFileSize(base.size)}`,
+        'Status: 파일을 읽을 수 없었습니다.',
+      ].join('\n'),
+      warnings: ['binary-metadata-only'],
+    }
+  }
+}
+
+// ── pdf ─────────────────────────────────────────────────────────────────────
+
+const MAX_PDF_CHARS = 16_000
+const MAX_PDF_PAGES = 50
+
+async function buildPdfAttachment(
+  base: Pick<UploadedFile, 'id' | 'name' | 'size' | 'mimeType'>,
+  bytes: Uint8Array,
+): Promise<UploadedFile> {
+  try {
+    const pdfjsLib = await import('pdfjs-dist')
+    pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+      'pdfjs-dist/build/pdf.worker.mjs',
+      import.meta.url,
+    ).toString()
+
+    const pdf = await pdfjsLib.getDocument({ data: bytes }).promise
+    const totalPages = pdf.numPages
+    const pagesToRead = Math.min(totalPages, MAX_PDF_PAGES)
+    const blocks: string[] = []
+    let totalChars = 0
+    let truncated = totalPages > MAX_PDF_PAGES
+
+    for (let i = 1; i <= pagesToRead; i++) {
+      if (totalChars >= MAX_PDF_CHARS) { truncated = true; break }
+      const page = await pdf.getPage(i)
+      const content = await page.getTextContent()
+      const pageText = content.items
+        .map((item) => ('str' in item ? item.str : ''))
+        .join(' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+      if (!pageText) continue
+      const block = `[페이지 ${i}]\n${pageText}`
+      const remaining = MAX_PDF_CHARS - totalChars
+      const clipped = clipText(block, remaining)
+      blocks.push(clipped)
+      totalChars += clipped.length
+      if (clipped.length < block.length) { truncated = true; break }
+    }
+
+    return {
+      ...base,
+      kind: 'text',
+      summary: `PDF — ${totalPages}페이지${truncated ? ' (일부 생략)' : ''}`,
+      promptContext: [
+        `File: ${base.name}`,
+        'Type: PDF document',
+        `Size: ${formatFileSize(base.size)}`,
+        `Pages: ${totalPages}`,
+        truncated ? 'Note: 내용이 길어 일부 생략됨' : '',
+        '',
+        blocks.join('\n\n'),
+      ].filter(Boolean).join('\n'),
+      warnings: truncated ? ['text-truncated'] : undefined,
+    }
+  } catch {
+    return {
+      ...base,
+      kind: 'binary',
+      summary: 'PDF를 파싱하는 데 실패했습니다.',
+      promptContext: [
+        `File: ${base.name}`,
+        'Type: PDF document',
+        `Size: ${formatFileSize(base.size)}`,
+        'Status: 파일을 읽을 수 없었습니다.',
+      ].join('\n'),
+      warnings: ['binary-metadata-only'],
+    }
+  }
 }
