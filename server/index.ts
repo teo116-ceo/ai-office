@@ -168,6 +168,7 @@ interface LLMRequest {
 // 허용된 모델 목록 — 이 외의 모델 ID는 모두 거부
 const ALLOWED_MODELS = new Set([
   'claude-opus-4-7',
+  'claude-opus-4-6',
   'claude-sonnet-4-6',
   'claude-haiku-4-5-20251001',
   'claude-opus-4-5',
