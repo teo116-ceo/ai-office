@@ -206,6 +206,10 @@ export const useAgentStore = create<AgentStore>()(persist(
         approvalRequired: persisted.approvalRequired ?? false,
         approvalPolicies: { ...DEFAULT_APPROVAL_POLICIES, ...persisted.approvalPolicies },
         usageByProvider: currentState.usageByProvider, // 세션 기반 — 저장하지 않고 항상 초기값 사용
+        themeMode: currentState.themeMode, // ai-office-theme 키로 별도 관리 — 구버전 persisted 값이 덮어쓰지 못하게 차단
+        fontFamily: currentState.fontFamily,
+        fontSize: currentState.fontSize,
+        responseLanguage: currentState.responseLanguage,
         webhookSettings: reviveWebhookSettings(persisted.webhookSettings, currentState.webhookSettings),
         notionSettings: reviveNotionSettings(persisted.notionSettings, currentState.notionSettings),
         notificationsSeenAt: persisted.notificationsSeenAt
