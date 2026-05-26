@@ -40,3 +40,27 @@ test('external http webhook is rejected', () => {
     message: '외부 웹훅은 https URL만 허용됩니다.',
   })
 })
+
+test('IPv4 private range is blocked', () => {
+  assert.equal(validateWebhookUrl('https://192.168.1.1/hook').ok, false)
+  assert.equal(validateWebhookUrl('https://10.0.0.1/hook').ok, false)
+  assert.equal(validateWebhookUrl('https://172.16.0.1/hook').ok, false)
+})
+
+test('IPv6 unique-local (fc00::/7) is blocked', () => {
+  assert.equal(validateWebhookUrl('https://[fc00::1]/hook').ok, false)
+  assert.equal(validateWebhookUrl('https://[fd00::1]/hook').ok, false)
+})
+
+test('IPv6 link-local (fe80::/10) is blocked', () => {
+  assert.equal(validateWebhookUrl('https://[fe80::1]/hook').ok, false)
+})
+
+test('IPv4-mapped IPv6 (::ffff:) is blocked', () => {
+  assert.equal(validateWebhookUrl('https://[::ffff:10.0.0.1]/hook').ok, false)
+  assert.equal(validateWebhookUrl('https://[::ffff:192.168.1.1]/hook').ok, false)
+})
+
+test('public IPv6 address is accepted', () => {
+  assert.equal(validateWebhookUrl('https://[2001:db8::1]/hook').ok, true)
+})

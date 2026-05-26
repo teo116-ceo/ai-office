@@ -16,18 +16,22 @@ import NotionSection from './settings/NotionSection'
 import SchedulerSection from './settings/SchedulerSection'
 import DataManagementSection from './settings/DataManagementSection'
 import ApiKeysSection from './settings/ApiKeysSection'
+import SystemSection from './settings/SystemSection'
+import UpdateSection from './settings/UpdateSection'
 
-type SettingsTab = 'appearance' | 'ai' | 'integrations' | 'data'
+type SettingsTab = 'appearance' | 'ai' | 'integrations' | 'data' | 'system'
 
 const TABS: Array<{ id: SettingsTab; label: string; description: string }> = [
   { id: 'appearance', label: '화면', description: '화면 테마와 표시 방식을 조정합니다.' },
   { id: 'ai', label: 'AI 동작', description: '메모리, 승인, 자동 전달, 브리핑 등 AI 동작 방식을 설정합니다.' },
   { id: 'integrations', label: '외부 연동', description: 'Discord, Slack, Notion 같은 외부 연동을 관리합니다.' },
   { id: 'data', label: '데이터', description: '사용량, 백업, 복원, 기록 정리를 관리합니다.' },
+  { id: 'system', label: '시스템', description: '트레이 상주, 전역 단축키, 자동 실행 등 Windows 동작을 설정합니다.' },
 ]
 
 export default function SettingsView() {
   const [activeTab, setActiveTab] = useState<SettingsTab>('appearance')
+  const [showAdvancedSettings, setShowAdvancedSettings] = useState(false)
   const {
     themeMode, fontFamily, fontSize, responseLanguage,
     memoryEnabled, memories,
@@ -94,25 +98,38 @@ export default function SettingsView() {
     openai: false,
     gemini: false,
   })
+  const [isLoadingProviders, setIsLoadingProviders] = useState(true)
+  const [providerFetchError, setProviderFetchError] = useState(false)
 
-  useEffect(() => {
+  const fetchProviderStatus = () => {
     let cancelled = false
+    setIsLoadingProviders(true)
+    setProviderFetchError(false)
 
     void fetch('/api/provider-status', { headers: apiHeaders() })
       .then(async (response) => (
         response.ok ? await response.json() as { providers?: Record<ProviderId, boolean> } : null
       ))
       .then((data) => {
-        if (!cancelled && data?.providers) {
+        if (cancelled) return
+        if (data?.providers) {
           setProviderKeyStatus(data.providers)
+        } else {
+          setProviderFetchError(true)
         }
       })
-      .catch(() => {})
+      .catch(() => {
+        if (!cancelled) setProviderFetchError(true)
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingProviders(false)
+      })
 
-    return () => {
-      cancelled = true
-    }
-  }, [])
+    return () => { cancelled = true }
+  }
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(fetchProviderStatus, [])
 
   const webhookUrlError = validateWebhookUrl(webhookSettings.url)
   const webhookReady = !webhookUrlError && webhookSettings.url.trim().length > 0
@@ -144,17 +161,20 @@ export default function SettingsView() {
           </div>
           <button
             type="button"
-            onClick={() => setActiveView('office')}
-            title="설정을 닫고 AI 오피스 화면으로 돌아갑니다."
-            className="rounded border border-office-panel/70 bg-office-panel px-3 py-2 text-sm text-office-text transition-colors hover:border-office-active hover:text-white"
+            onClick={() => setActiveView('dashboard')}
+            title="설정을 닫고 대시보드로 돌아갑니다."
+            className="rounded border border-office-panel/70 bg-office-panel px-3 py-2 text-sm text-office-text transition-colors hover:border-office-active hover:text-white md:hidden"
           >
-            AI 오피스로 이동
+            AI Office 운영실로 이동
           </button>
         </div>
 
         <QuickStatusPanel
           connectedProviderCount={connectedProviderCount}
           totalProviders={3}
+          isLoadingProviders={isLoadingProviders}
+          providerFetchError={providerFetchError}
+          onRetryProviders={fetchProviderStatus}
           webhookEnabled={webhookSettings.enabled}
           webhookReady={webhookReady}
           notionEnabled={notionSettings.enabled}
@@ -181,6 +201,26 @@ export default function SettingsView() {
             </button>
           ))}
         </div>
+
+        {activeTab !== 'appearance' && activeTab !== 'system' ? (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-office-panel/70 bg-office-sidebar px-4 py-3">
+            <div>
+              <p className="text-sm font-semibold text-white">
+                {showAdvancedSettings ? '고급 설정 표시 중' : '기본 설정만 표시 중'}
+              </p>
+              <p className="mt-0.5 text-xs text-office-text/50">
+                자동화, 외부 연동, 사용량 관리처럼 자주 쓰지 않는 항목은 고급 설정에 모았습니다.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowAdvancedSettings((current) => !current)}
+              className="rounded border border-office-panel/70 bg-office-panel px-3 py-2 text-sm text-office-text transition-colors hover:border-office-active hover:text-white"
+            >
+              {showAdvancedSettings ? '고급 설정 숨기기' : '고급 설정 보기'}
+            </button>
+          </div>
+        ) : null}
 
         {activeTab === 'appearance' ? (
           <AppearanceSection
@@ -242,12 +282,14 @@ export default function SettingsView() {
               setApprovalRequired={setApprovalRequired}
               setApprovalPolicies={setApprovalPolicies}
             />
-            <DirectivesSection directives={directives} clearDirectives={clearDirectives} />
+            {showAdvancedSettings ? (
+              <>
+                <DirectivesSection directives={directives} clearDirectives={clearDirectives} />
 
             <div className="mt-2">
               <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-office-text/40">토론 분석</p>
               <p className="mb-4 text-xs text-office-text/50">
-                복잡한 업무를 다층 토론으로 처리합니다. 활성화 시 복잡도에 따라 부서 내부 토론 → 부서 간 종합 → 모델 토론(Claude·GPT·Gemini)을 자동 실행합니다.
+                복잡한 업무를 다층 토론으로 처리합니다. 활성화 시 복잡도에 따라 부서 내부 검토 → 부서 간 상호 토론 → 최종 결론을 자동 실행합니다.
               </p>
             </div>
             <div className="rounded-2xl border border-office-panel bg-office-sidebar p-5">
@@ -262,10 +304,10 @@ export default function SettingsView() {
                       간단 → 단일 실행
                     </span>
                     <span className="rounded-full border border-office-panel/70 bg-office-panel/50 px-2.5 py-1 text-[11px] text-office-text/60">
-                      보통 → Claude·GPT 2자 토론
+                      보통 → 담당 부서 내부 검토
                     </span>
                     <span className="rounded-full border border-office-panel/70 bg-office-panel/50 px-2.5 py-1 text-[11px] text-office-text/60">
-                      복합 → Claude·GPT·Gemini 3자 토론
+                      복합 → 부서 간 상호 토론
                     </span>
                   </div>
                 </div>
@@ -296,10 +338,12 @@ export default function SettingsView() {
               setTriggers={setTriggers}
               setTriggersEnabled={setTriggersEnabled}
             />
-            <SchedulerSection
-              schedulerSettings={schedulerSettings}
-              setSchedulerSettings={setSchedulerSettings}
-            />
+                <SchedulerSection
+                  schedulerSettings={schedulerSettings}
+                  setSchedulerSettings={setSchedulerSettings}
+                />
+              </>
+            ) : null}
           </>
         ) : null}
 
@@ -309,36 +353,63 @@ export default function SettingsView() {
               providerKeyStatus={providerKeyStatus}
               onStatusChange={setProviderKeyStatus}
             />
-            <NotificationsSection
-              webhookSettings={webhookSettings}
-              webhookUrlError={webhookUrlError}
-              setWebhookSettings={setWebhookSettings}
-              resetWebhookSettings={resetWebhookSettings}
-            />
-            <NotionSection
-              notionSettings={notionSettings}
-              notionSessionReady={notionSessionReady}
-              setNotionSettings={setNotionSettings}
-              resetNotionSettings={resetNotionSettings}
-            />
+            {showAdvancedSettings ? (
+              <>
+                <NotificationsSection
+                  webhookSettings={webhookSettings}
+                  webhookUrlError={webhookUrlError}
+                  setWebhookSettings={setWebhookSettings}
+                  resetWebhookSettings={resetWebhookSettings}
+                />
+                <NotionSection
+                  notionSettings={notionSettings}
+                  notionSessionReady={notionSessionReady}
+                  setNotionSettings={setNotionSettings}
+                  resetNotionSettings={resetNotionSettings}
+                />
+              </>
+            ) : null}
           </>
         ) : null}
 
         {activeTab === 'data' ? (
           <>
-            <TokenUsageSection
-              usageByProvider={usageByProvider}
-              providerKeyStatus={providerKeyStatus}
-              resetProviderUsage={resetProviderUsage}
-              dailyTokenBudget={dailyTokenBudget}
-              setDailyTokenBudget={setDailyTokenBudget}
-            />
+            {showAdvancedSettings ? (
+              <TokenUsageSection
+                usageByProvider={usageByProvider}
+                providerKeyStatus={providerKeyStatus}
+                resetProviderUsage={resetProviderUsage}
+                dailyTokenBudget={dailyTokenBudget}
+                setDailyTokenBudget={setDailyTokenBudget}
+              />
+            ) : null}
             <DataManagementSection
               clearMessages={clearMessages}
               clearTasks={clearTasks}
               resetWebhookSettings={resetWebhookSettings}
               resetNotionSettings={resetNotionSettings}
             />
+          </>
+        ) : null}
+
+        {activeTab === 'system' ? (
+          <>
+            <SystemSection />
+            <UpdateSection />
+            {/* 오류 기록 — 클라이언트에게 노출하지 않도록 사이드바가 아닌 시스템 탭 하단에 위치 */}
+            <div className="rounded-xl border border-office-panel/60 bg-office-panel/20 px-4 py-3 flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium text-office-text/70">오류 기록</p>
+                <p className="text-xs text-office-text/40 mt-0.5">세션 중 발생한 내부 오류를 확인합니다.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveView('errors')}
+                className="shrink-0 rounded border border-office-panel/70 bg-office-panel px-3 py-1.5 text-xs text-office-text/60 transition-colors hover:border-red-400/50 hover:text-red-300"
+              >
+                오류 기록 보기 →
+              </button>
+            </div>
           </>
         ) : null}
       </div>

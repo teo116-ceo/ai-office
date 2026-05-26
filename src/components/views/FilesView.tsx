@@ -69,6 +69,7 @@ export default function FilesView() {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadFiles()
   }, [])
 
@@ -107,6 +108,8 @@ export default function FilesView() {
   }
 
   const handleDelete = async (file: OutputFileInfo) => {
+    if (!window.confirm(`${file.name} 파일을 삭제할까요? 삭제 후에는 복구할 수 없습니다.`)) return
+
     setDeletingFile(file.name)
     const ok = await deleteOutputFile(file.name)
     if (ok) {

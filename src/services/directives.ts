@@ -1,4 +1,3 @@
-import { AGENT_TILE_POSITIONS, MEETING_ROOM_POSITIONS, resolveLargeMeetingChairPositions, WORK_SEAT_TILE_POSITIONS } from '@/components/office/officeLayout'
 import { useAgentStore } from '@/store/agentStore'
 import {
   Agent,
@@ -43,31 +42,6 @@ type MeetingDismissalRoutine = {
 const ALL_DEPARTMENTS = Object.keys(DEPARTMENTS) as DepartmentId[]
 const activeMeetingDismissals = new Map<string, MeetingDismissalRoutine>()
 const MEETING_DISMISS_MESSAGE = '회의를 마치고 복귀 중'
-const MEETING_DISMISS_EXIT_TILES: Record<MeetingRoom, Array<{ col: number; row: number }>> = {
-  small: [
-    { col: 1, row: 7 },
-    { col: 2, row: 7 },
-    { col: 3, row: 7 },
-    { col: 4, row: 7 },
-    { col: 5, row: 7 },
-  ],
-  medium: [
-    { col: 8, row: 7 },
-    { col: 9, row: 7 },
-    { col: 10, row: 7 },
-    { col: 11, row: 7 },
-    { col: 12, row: 7 },
-    { col: 13, row: 7 },
-  ],
-  large: [
-    { col: 14, row: 7 },
-    { col: 13, row: 7 },
-    { col: 12, row: 7 },
-    { col: 11, row: 7 },
-    { col: 10, row: 7 },
-    { col: 9, row: 7 },
-  ],
-}
 
 const COMPANY_ANNOUNCEMENT_PREFIXES = [
   '전사 공지',
@@ -263,7 +237,6 @@ export function syncDirectiveAgentMessages() {
 
     if (meetingDirective) {
       cancelMeetingDismissal(agent.id)
-      store.clearAgentPresence(agent.id)
       store.updateAgentStatus(agent.id, 'moving', deriveAgentDirectiveMessage(meetingDirective))
       continue
     }
@@ -287,33 +260,13 @@ export function resolveDepartmentFloor(departmentId: DepartmentId) {
   return meetingDirective?.channelFloorId ?? DEPT_FLOOR[departmentId]
 }
 
-export function resolveAgentTile(agent: Pick<Agent, 'id' | 'departmentId' | 'status'>) {
-  const meetingDirective = getLatestMeetingDirective(agent.departmentId)
-  if (!meetingDirective || !meetingDirective.meetingRoom || meetingDirective.channelFloorId !== '1f') {
-    const presence = useAgentStore.getState().agentPresenceById[agent.id]
-    if (presence) {
-      return presence.tile
-    }
-
-    return WORK_SEAT_TILE_POSITIONS[agent.id] ?? AGENT_TILE_POSITIONS[agent.id] ?? { col: 5, row: 7 }
-  }
-
-  const participants = getMeetingParticipants(meetingDirective)
-  const seatIndex = participants.findIndex((candidate) => candidate.id === agent.id)
-  const seats = meetingDirective.meetingRoom === 'large'
-    ? resolveLargeMeetingChairPositions(participants.length)
-    : MEETING_ROOM_POSITIONS[meetingDirective.meetingRoom]
-  return seats[seatIndex] ?? seats[seats.length - 1] ?? AGENT_TILE_POSITIONS[agent.id] ?? { col: 5, row: 7 }
-}
-
 export function resolveAgentFloor(agent: Pick<Agent, 'id' | 'departmentId'>) {
   const meetingDirective = getLatestMeetingDirective(agent.departmentId)
   if (meetingDirective?.channelFloorId) {
     return meetingDirective.channelFloorId
   }
 
-  const presence = useAgentStore.getState().agentPresenceById[agent.id]
-  return presence?.floorId ?? resolveDepartmentFloor(agent.departmentId)
+  return resolveDepartmentFloor(agent.departmentId)
 }
 
 export function shouldInterruptAgentWork(agentId: string, startedDirectiveRevision: number) {
@@ -498,50 +451,19 @@ function cancelMeetingDismissal(agentId: string) {
   activeMeetingDismissals.delete(agentId)
 }
 
-function estimateMeetingDismissMs(origin: { col: number; row: number }, target: { col: number; row: number }) {
-  const distance = Math.abs(origin.col - target.col) + Math.abs(origin.row - target.row)
-  return 700 + distance * 240
-}
-
-function resolveDismissOriginTile(
-  clearedMeeting: OrganizationDirective & { meetingRoom: MeetingRoom },
-  participantCount: number,
-  index: number,
-) {
-  if (clearedMeeting.meetingRoom === 'large') {
-    return resolveLargeMeetingChairPositions(participantCount)[index]
-  }
-
-  return MEETING_ROOM_POSITIONS[clearedMeeting.meetingRoom][index]
-}
-
 function resetClearedMeetingParticipants(clearedMeeting: OrganizationDirective) {
   const store = useAgentStore.getState()
-  const meetingMessageKeywords = [
-    '회의',
-    '회의실',
-    '집결',
-    '협의',
-    '복귀',
-  ]
-  const dismissTargets = clearedMeeting.meetingRoom ? MEETING_DISMISS_EXIT_TILES[clearedMeeting.meetingRoom] : undefined
-  const participants = store.agents.filter((agent) => (
-    clearedMeeting.departmentIds.includes(agent.departmentId) &&
-    !hasActiveMeetingDirective(agent.departmentId)
-  ))
+  const meetingMessageKeywords = ['회의', '회의실', '집결', '협의', '복귀']
+  const participants = getMeetingParticipants(clearedMeeting).filter(
+    (agent) => !hasActiveMeetingDirective(agent.departmentId),
+  )
 
-  if (dismissTargets && dismissedMeetingShouldAnimate(clearedMeeting)) {
+  if (clearedMeeting.meetingRoom && clearedMeeting.channelFloorId === '1f') {
     participants.forEach((agent, index) => {
-      const exitTile = dismissTargets[index % dismissTargets.length]
-      const originTile = store.agentPresenceById[agent.id]?.tile
-        ?? resolveDismissOriginTile(clearedMeeting, participants.length, index)
-        ?? AGENT_TILE_POSITIONS[agent.id]
-        ?? { col: 5, row: 7 }
       const dismissId = `${Date.now()}-${agent.id}-${Math.random().toString(36).slice(2, 8)}`
-      const dismissMs = estimateMeetingDismissMs(originTile, exitTile)
+      const dismissMs = 700 + index * 240
 
       cancelMeetingDismissal(agent.id)
-      store.setAgentPresence(agent.id, { floorId: '1f', tile: exitTile, mode: 'meeting_exit' })
       store.updateAgentStatus(agent.id, 'moving', MEETING_DISMISS_MESSAGE)
 
       const timer = setTimeout(() => {
@@ -551,7 +473,6 @@ function resetClearedMeetingParticipants(clearedMeeting: OrganizationDirective) 
         }
 
         activeMeetingDismissals.delete(agent.id)
-        useAgentStore.getState().clearAgentPresence(agent.id)
         useAgentStore.getState().updateAgentStatus(agent.id, 'idle', undefined)
       }, dismissMs)
 
@@ -562,10 +483,6 @@ function resetClearedMeetingParticipants(clearedMeeting: OrganizationDirective) 
   }
 
   for (const agent of participants) {
-    if (hasActiveMeetingDirective(agent.departmentId)) {
-      continue
-    }
-
     const hasMeetingMessage = agent.message
       ? isDirectiveMessage(agent.message) || includesNormalized(agent.message, meetingMessageKeywords)
       : false
@@ -579,8 +496,4 @@ function resetClearedMeetingParticipants(clearedMeeting: OrganizationDirective) 
       store.updateAgentMessage(agent.id, undefined)
     }
   }
-}
-
-function dismissedMeetingShouldAnimate(clearedMeeting: OrganizationDirective): clearedMeeting is OrganizationDirective & { meetingRoom: MeetingRoom } {
-  return clearedMeeting.channelFloorId === '1f' && Boolean(clearedMeeting.meetingRoom)
 }

@@ -59,7 +59,7 @@ export const AGENT_TOOLS: Anthropic.Tool[] = [
 
 // ─── 도구 실행 ────────────────────────────────────────────────────────────────
 function sanitizeFilename(name: string): string {
-  return path.basename(name).replace(/[^a-zA-Z0-9가-힣_.\-]/g, '_').slice(0, 120)
+  return path.basename(name).replace(/[^a-zA-Z0-9가-힣_.-]/g, '_').slice(0, 120)
 }
 
 interface WriteFileInput { filename: string; content: string }
@@ -119,6 +119,7 @@ export interface ToolCallRecord {
 export interface LLMToolsResult {
   text: string
   toolCalls: ToolCallRecord[]
+  stopReason?: string | null
 }
 
 export async function runLLMWithTools(params: {
@@ -147,7 +148,7 @@ export async function runLLMWithTools(params: {
         .filter((b): b is Anthropic.TextBlock => b.type === 'text')
         .map((b) => b.text)
         .join('')
-      return { text, toolCalls }
+      return { text, toolCalls, stopReason: response.stop_reason }
     }
 
     // 도구 호출 처리
@@ -167,7 +168,7 @@ export async function runLLMWithTools(params: {
     messages.push({ role: 'user', content: toolResults })
   }
 
-  return { text: '(최대 반복 도달)', toolCalls }
+  return { text: '(최대 반복 도달)', toolCalls, stopReason: 'max_iters' }
 }
 
 // ─── 파일 목록 반환 (API용) ───────────────────────────────────────────────────
@@ -192,6 +193,8 @@ export function readOutputFile(filename: string): string | null {
   ensureOutputDir()
   const safe = sanitizeFilename(filename)
   const fullPath = path.join(OUTPUT_DIR, safe)
+  // write_file과 동일한 경계 검사 — sanitizeFilename이 basename을 쓰지만 이중 방어
+  if (!fullPath.startsWith(OUTPUT_DIR + path.sep)) return null
   if (!fs.existsSync(fullPath)) return null
   if (!fs.statSync(fullPath).isFile()) return null
   return fs.readFileSync(fullPath, 'utf8')
@@ -201,6 +204,7 @@ export function deleteOutputFile(filename: string): boolean {
   ensureOutputDir()
   const safe = sanitizeFilename(filename)
   const fullPath = path.join(OUTPUT_DIR, safe)
+  if (!fullPath.startsWith(OUTPUT_DIR + path.sep)) return false
   if (!fs.existsSync(fullPath) || !fs.statSync(fullPath).isFile()) return false
   fs.unlinkSync(fullPath)
   return true

@@ -8,7 +8,7 @@ export interface SchedulerSettings {
   minute: number
 }
 
-const BRIEFING_DEPARTMENTS: DepartmentId[] = ['ceo', 'security', 'development', 'planning']
+const BRIEFING_DEPARTMENTS: DepartmentId[] = ['ceo', 'security', 'development', 'devops', 'qa', 'compliance', 'management']
 
 function buildBriefingBody() {
   const store = useAgentStore.getState()

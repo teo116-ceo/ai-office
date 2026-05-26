@@ -6,7 +6,6 @@ import { getAgentRoleCompactLabel } from '@/utils/agentRoleMeta'
 
 const NAV_ITEMS = [
   { id: 'dashboard', label: '대시보드', icon: '📊', tooltip: '전체 현황과 최근 움직임을 확인합니다.' },
-  { id: 'office', label: 'AI 오피스', icon: '🏢', tooltip: '층별 운영 화면으로 이동합니다.' },
   { id: 'tasks', label: '작업 관리', icon: '📝', tooltip: '업무 목록과 진행 상태를 확인합니다.' },
   { id: 'chat', label: '팀 채팅', icon: '💬', tooltip: '부서와 팀의 최근 메시지를 확인합니다.' },
   { id: 'agents', label: '에이전트', icon: '🤖', tooltip: '에이전트 이름, 역할, 모델을 관리합니다.' },
@@ -37,7 +36,7 @@ export default function Sidebar() {
       const next = !prev
       try {
         localStorage.setItem('sidebar-collapsed', String(next))
-      } catch {}
+      } catch (_e) { /* localStorage unavailable */ }
       return next
     })
   }

@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { SectionCard } from './SettingsPrimitives'
 import { exportBackup, importBackup, sendBackupToServer } from '@/services/backupService'
+import { forceRestoreFromBackup, getBackupMessageCount } from '@/services/stateSync'
 import { apiHeaders } from '@/utils/apiHeaders'
 
 interface Props {
@@ -14,7 +15,9 @@ export default function DataManagementSection({ clearMessages, clearTasks, reset
   const [handoverDone, setHandoverDone] = useState(false)
   const [backupMsg, setBackupMsg] = useState<{ ok: boolean; text: string } | null>(null)
   const [importing, setImporting] = useState(false)
+  const [restoring, setRestoring] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const backupMsgCount = getBackupMessageCount()
 
   function showMsg(ok: boolean, text: string) {
     setBackupMsg({ ok, text })
@@ -50,6 +53,46 @@ export default function DataManagementSection({ clearMessages, clearTasks, reset
       setImporting(false)
       if (fileInputRef.current) fileInputRef.current.value = ''
     }
+  }
+
+  async function handleRestoreBackup() {
+    if (!window.confirm(`로컬 백업(${backupMsgCount}개 메시지)으로 복구할까요? 현재 빈 대화 기록이 백업으로 대체됩니다.`)) return
+    setRestoring(true)
+    try {
+      const ok = await forceRestoreFromBackup()
+      if (ok) {
+        showMsg(true, '백업으로 복구했습니다. 잠시 후 새로고침됩니다.')
+        setTimeout(() => window.location.reload(), 1500)
+      } else {
+        showMsg(false, '복구할 백업 데이터가 없습니다.')
+      }
+    } finally {
+      setRestoring(false)
+    }
+  }
+
+  function handleClearMessages() {
+    if (!window.confirm('대화 기록을 모두 비울까요? 이 작업은 되돌릴 수 없습니다.')) return
+    clearMessages()
+  }
+
+  function handleClearTasks() {
+    if (!window.confirm('업무 목록과 업무 기록을 모두 비울까요? 이 작업은 되돌릴 수 없습니다.')) return
+    clearTasks()
+  }
+
+  function handleHandoverReset() {
+    if (!window.confirm('개인 연동 정보, API 키, 대화 기록, 업무 기록을 모두 초기화할까요? 이 작업은 되돌릴 수 없습니다.')) return
+    resetWebhookSettings()
+    resetNotionSettings()
+    clearMessages()
+    clearTasks()
+    void fetch('/api/provider-keys', {
+      method: 'DELETE',
+      headers: apiHeaders(),
+    })
+    setHandoverDone(true)
+    setTimeout(() => setHandoverDone(false), 4000)
   }
 
   return (
@@ -106,6 +149,25 @@ export default function DataManagementSection({ clearMessages, clearTasks, reset
         </p>
       </SectionCard>
 
+      {backupMsgCount > 0 && (
+        <SectionCard
+          title="대화 자동 백업 복구"
+          description="앱 업데이트나 동기화 오류로 대화가 사라진 경우 로컬 백업에서 되돌릴 수 있습니다."
+        >
+          <div className="rounded-xl border border-office-active/30 bg-office-active/5 px-4 py-3 text-sm text-office-text/80">
+            로컬 백업에 <span className="font-semibold text-office-active">{backupMsgCount}개</span>의 대화가 보관되어 있습니다.
+          </div>
+          <button
+            type="button"
+            onClick={() => { void handleRestoreBackup() }}
+            disabled={restoring}
+            className="rounded border border-office-active/40 bg-office-active/10 px-4 py-2 text-sm font-semibold text-office-active transition-colors hover:bg-office-active/20 disabled:opacity-50"
+          >
+            {restoring ? '복구 중...' : `백업으로 대화 복구 (${backupMsgCount}개)`}
+          </button>
+        </SectionCard>
+      )}
+
       <SectionCard
         title="기록 정리"
         description="현재 세션에 쌓인 대화와 업무 기록을 개별적으로 정리합니다."
@@ -113,7 +175,7 @@ export default function DataManagementSection({ clearMessages, clearTasks, reset
         <div className="flex flex-wrap gap-3">
           <button
             type="button"
-            onClick={clearMessages}
+            onClick={handleClearMessages}
             title="저장된 대화 메시지를 모두 삭제합니다."
             className="rounded border border-office-panel/70 bg-office-panel px-4 py-2 text-sm text-office-text transition-colors hover:border-office-active hover:text-white"
           >
@@ -121,7 +183,7 @@ export default function DataManagementSection({ clearMessages, clearTasks, reset
           </button>
           <button
             type="button"
-            onClick={clearTasks}
+            onClick={handleClearTasks}
             title="현재 업무 목록과 기록을 모두 비웁니다."
             className="rounded border border-office-panel/70 bg-office-panel px-4 py-2 text-sm text-office-text transition-colors hover:border-office-active hover:text-white"
           >
@@ -147,18 +209,7 @@ export default function DataManagementSection({ clearMessages, clearTasks, reset
         <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={() => {
-              resetWebhookSettings()
-              resetNotionSettings()
-              clearMessages()
-              clearTasks()
-              void fetch('/api/provider-keys', {
-                method: 'DELETE',
-                headers: apiHeaders(),
-              })
-              setHandoverDone(true)
-              setTimeout(() => setHandoverDone(false), 4000)
-            }}
+            onClick={handleHandoverReset}
             className="rounded border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm font-semibold text-red-400 transition-colors hover:bg-red-500/20"
           >
             인수인계 초기화 실행

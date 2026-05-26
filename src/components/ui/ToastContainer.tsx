@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useAgentStore } from '@/store/agentStore'
 import { useShallow } from 'zustand/react/shallow'
+import { useTaskActions } from '@/hooks/useTaskActions'
 import type { Toast, ToastLevel } from '@/types'
 
 const LEVEL_STYLE: Record<Exclude<ToastLevel, 'approval'>, { bar: string; icon: string; label: string }> = {
@@ -11,28 +12,31 @@ const LEVEL_STYLE: Record<Exclude<ToastLevel, 'approval'>, { bar: string; icon: 
 }
 
 function ApprovalToastItem({ toast }: { toast: Toast }) {
-  const { removeToast, approveTask, rejectTask } = useAgentStore(
+  const { approve, reject } = useTaskActions()
+  const { removeToast } = useAgentStore(
     useShallow((s) => ({
       removeToast: s.removeToast,
-      approveTask: s.approveTask,
-      rejectTask: s.rejectTask,
     }))
   )
+  const taskDescription = useAgentStore((s) =>
+    toast.taskId ? s.tasks.find((task) => task.id === toast.taskId)?.description : undefined
+  )
+  const detailText = taskDescription ?? toast.title
 
   function handleApprove() {
-    if (toast.taskId) approveTask(toast.taskId)
+    if (toast.taskId) approve(toast.taskId)
     removeToast(toast.id)
   }
 
   function handleReject() {
-    if (toast.taskId) rejectTask(toast.taskId)
+    if (toast.taskId) reject(toast.taskId)
     removeToast(toast.id)
   }
 
   return (
-    <div className="w-80 overflow-hidden rounded-xl border border-yellow-500/40 bg-office-sidebar shadow-2xl">
+    <div className="flex max-h-[calc(100vh-2rem)] w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl border border-yellow-500/40 bg-office-sidebar shadow-2xl sm:w-[28rem]">
       {/* 상단 헤더 */}
-      <div className="flex items-center gap-2 border-b border-yellow-500/20 bg-yellow-500/10 px-4 py-2.5">
+      <div className="flex shrink-0 items-center gap-2 border-b border-yellow-500/20 bg-yellow-500/10 px-4 py-2.5">
         <span className="text-sm">🔔</span>
         <p className="flex-1 text-xs font-bold text-yellow-400">AI 결과물 검토 필요</p>
         <button
@@ -46,8 +50,8 @@ function ApprovalToastItem({ toast }: { toast: Toast }) {
       </div>
 
       {/* 본문 */}
-      <div className="px-4 py-3">
-        <p className="text-sm font-semibold text-white leading-snug">{toast.title}</p>
+      <div className="min-h-0 overflow-y-auto px-4 py-3">
+        <p className="break-words text-sm font-semibold leading-snug text-white">{detailText}</p>
         {toast.message && (
           <p className="mt-1 text-xs text-office-text/60 leading-relaxed">{toast.message}</p>
         )}
@@ -68,7 +72,7 @@ function ApprovalToastItem({ toast }: { toast: Toast }) {
       </div>
 
       {/* 승인 / 거절 버튼 */}
-      <div className="flex border-t border-office-panel">
+      <div className="flex shrink-0 border-t border-office-panel">
         <button
           type="button"
           onClick={handleReject}
@@ -127,7 +131,7 @@ export default function ToastContainer() {
   if (toasts.length === 0) return null
 
   return (
-    <div className="pointer-events-none fixed bottom-6 right-6 z-50 flex flex-col gap-2">
+    <div className="pointer-events-none fixed bottom-4 right-4 z-50 flex flex-col items-end gap-2 sm:bottom-6 sm:right-6">
       {toasts.map((toast) => (
         <div key={toast.id} className="pointer-events-auto">
           {toast.level === 'approval'

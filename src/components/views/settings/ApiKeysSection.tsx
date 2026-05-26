@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { apiHeaders } from '@/utils/apiHeaders'
 import type { ProviderId } from '@/types'
 import { SectionCard } from './SettingsPrimitives'
@@ -14,11 +14,21 @@ const PROVIDERS: Array<{ id: ProviderId; label: string; placeholder: string; pre
   { id: 'gemini',    label: 'Google (Gemini)',     placeholder: 'AIza...',           prefix: 'AIza'    },
 ]
 
+const isElectron = typeof window !== 'undefined' && 'electronAPI' in window
+
 export default function ApiKeysSection({ providerKeyStatus, onStatusChange }: Props) {
   const [keys, setKeys] = useState<Record<ProviderId, string>>({ anthropic: '', openai: '', gemini: '' })
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState<{ text: string; ok: boolean } | null>(null)
   const [show, setShow] = useState<Record<ProviderId, boolean>>({ anthropic: false, openai: false, gemini: false })
+
+  // Electron에서 기존 키 값을 불러와 미리 채움
+  useEffect(() => {
+    if (!isElectron || !window.electronAPI) return
+    void window.electronAPI.getApiKeys().then((loaded) => {
+      setKeys({ anthropic: loaded.anthropic ?? '', openai: loaded.openai ?? '', gemini: loaded.gemini ?? '' })
+    })
+  }, [])
 
   function setKey(id: ProviderId, value: string) {
     setKeys((prev) => ({ ...prev, [id]: value }))
@@ -39,6 +49,17 @@ export default function ApiKeysSection({ providerKeyStatus, onStatusChange }: Pr
     setMsg(null)
 
     try {
+      // Electron: IPC를 통해 저장 (api-keys.json + 앱 재시작)
+      if (isElectron && window.electronAPI) {
+        await window.electronAPI.saveApiKeys({
+          anthropic: keys.anthropic.trim(),
+          openai: keys.openai.trim(),
+          gemini: keys.gemini.trim(),
+        })
+        return // saveApiKeys triggers app.relaunch() — no further code runs
+      }
+
+      // 웹: HTTP endpoint
       const body: Record<string, string> = {}
       if (keys.anthropic.trim()) body.anthropic = keys.anthropic.trim()
       if (keys.openai.trim()) body.openai = keys.openai.trim()
@@ -53,10 +74,11 @@ export default function ApiKeysSection({ providerKeyStatus, onStatusChange }: Pr
 
       if (!response.ok || !data.ok) throw new Error(data.error ?? '저장 실패')
 
-      setKeys({ anthropic: '', openai: '', gemini: '' })
       setMsg({ text: 'API 키가 저장되었습니다.', ok: true })
 
-      const statusRes = await fetch('/api/provider-status')
+      const statusRes = await fetch('/api/provider-status', {
+        headers: apiHeaders(),
+      })
       if (statusRes.ok) {
         const statusData = await statusRes.json() as { providers?: Record<ProviderId, boolean> }
         if (statusData.providers) onStatusChange(statusData.providers)

@@ -36,7 +36,7 @@ export async function evaluateAndFireTriggers(
     if (!matches) continue
 
     // 동일 대상 부서로 중복 트리거 방지
-    const toDeptsKey = trigger.toDepts.sort().join(',')
+    const toDeptsKey = [...trigger.toDepts].sort().join(',')
     if (firedToDepts.has(toDeptsKey)) continue
     firedToDepts.add(toDeptsKey)
 
@@ -141,7 +141,7 @@ export async function runTriggeredTask(
 
   store.addMessage({
     sender: ceoAgent?.id ?? 'ceo-01',
-    senderName: `${ceoAgent?.name ?? '임태오'} (자율 트리거)`,
+    senderName: `${ceoAgent?.name ?? '대표'} (자율 트리거)`,
     content: `[자동 트리거] ${targetDepts.map((d) => store.agents.find((a) => a.departmentId === d)?.name ?? d).join(', ')}에 연쇄 업무가 전달됩니다.`,
     type: 'system',
     taskId,

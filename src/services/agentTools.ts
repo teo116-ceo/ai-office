@@ -11,6 +11,7 @@ export interface ToolCallRecord {
 export interface LLMToolsResult {
   text: string
   toolCalls: ToolCallRecord[]
+  stopReason?: string | null
 }
 
 export interface OutputFileInfo {

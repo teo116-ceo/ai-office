@@ -5,3 +5,25 @@ release
 .env
 .env.electron
 *.local
+
+# 서버 런타임 생성 파일 — 커밋하면 안 됨
+sessions.json
+server-state.json
+server-state-meta.json
+server-budget.json
+
+# 에이전트 출력 파일
+agent-output/
+
+# 로그
+*.log
+*.err.log
+*.out.log
+error.log
+
+# 서버 프로덕션 빌드 출력 (npm run build:server)
+build/
+
+# OS
+.DS_Store
+Thumbs.db

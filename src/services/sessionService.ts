@@ -15,20 +15,15 @@ export function notifySessionExpired(): void {
 }
 
 export function getSessionToken(): string | null {
-  return localStorage.getItem(SESSION_STORAGE_KEY)
-    ?? sessionStorage.getItem(SESSION_STORAGE_KEY)
+  localStorage.removeItem(SESSION_STORAGE_KEY)
+  localStorage.removeItem(REMEMBER_STORAGE_KEY)
+  return sessionStorage.getItem(SESSION_STORAGE_KEY)
 }
 
-function setSessionToken(token: string, remember: boolean): void {
-  if (remember) {
-    localStorage.setItem(SESSION_STORAGE_KEY, token)
-    localStorage.setItem(REMEMBER_STORAGE_KEY, '1')
-    sessionStorage.removeItem(SESSION_STORAGE_KEY)
-  } else {
-    sessionStorage.setItem(SESSION_STORAGE_KEY, token)
-    localStorage.removeItem(SESSION_STORAGE_KEY)
-    localStorage.removeItem(REMEMBER_STORAGE_KEY)
-  }
+function setSessionToken(token: string): void {
+  sessionStorage.setItem(SESSION_STORAGE_KEY, token)
+  localStorage.removeItem(SESSION_STORAGE_KEY)
+  localStorage.removeItem(REMEMBER_STORAGE_KEY)
 }
 
 export function clearSession(): void {
@@ -38,7 +33,7 @@ export function clearSession(): void {
 }
 
 export function isRemembered(): boolean {
-  return localStorage.getItem(REMEMBER_STORAGE_KEY) === '1'
+  return false
 }
 
 export async function startSession(
@@ -46,6 +41,7 @@ export async function startSession(
   password: string,
   remember = false,
 ): Promise<{ ok: boolean; error?: string }> {
+  void remember
   try {
     const res = await fetch('/api/session/start', {
       method: 'POST',
@@ -54,7 +50,7 @@ export async function startSession(
     })
     const data = await res.json() as { ok: boolean; token?: string; error?: string }
     if (data.ok && data.token) {
-      setSessionToken(data.token, remember)
+      setSessionToken(data.token)
       return { ok: true }
     }
     return { ok: false, error: data.error ?? '세션 시작에 실패했습니다.' }
@@ -83,22 +79,29 @@ export async function validateExistingSession(): Promise<boolean> {
 
 export async function isLoginRequired(): Promise<boolean> {
   try {
-    const res = await fetch('/api/session/start', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
-    })
-
-    if (res.ok) {
-      const data = await res.json() as { ok: boolean; token?: string }
-      if (data.ok && data.token) {
-        setSessionToken(data.token, false)
-        return false
+    // GET /api/session/required — 401 없이 200으로 로그인 필요 여부만 확인
+    const checkRes = await fetch('/api/session/required')
+    if (checkRes.ok) {
+      const data = await checkRes.json() as { required: boolean }
+      if (!data.required) {
+        // 비밀번호 미설정 환경 — 빈 자격증명으로 세션 발급
+        const startRes = await fetch('/api/session/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        })
+        if (startRes.ok) {
+          const startData = await startRes.json() as { ok: boolean; token?: string }
+          if (startData.ok && startData.token) {
+            setSessionToken(startData.token)
+            return false
+          }
+        }
       }
+      return data.required
     }
-
     return true
   } catch {
-    return false
+    return true
   }
 }

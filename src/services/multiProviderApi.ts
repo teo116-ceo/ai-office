@@ -1,22 +1,24 @@
 import { useAgentStore } from '@/store/agentStore'
-import { Agent } from '@/types'
+import type { Agent } from '@/types'
+import type { LLMApiMessage, LLMApiRequest, LLMApiResponse } from '@/types/llmApi'
+import { MODEL_PRICING } from '@/config/models'
 import { apiHeaders } from '@/utils/apiHeaders'
 import { notifySessionExpired } from '@/services/sessionService'
+import { recordError } from '@/services/errorLog'
 
 type ModelId = Agent['model']
 
-export type LLMMessage = { role: 'user' | 'assistant'; content: string }
-
-export interface LLMRequest {
-  model: ModelId
-  system: string
-  messages: LLMMessage[]
-  maxTokens?: number
+// 공유 타입 re-export (기존 코드 호환성 유지)
+export type LLMMessage = LLMApiMessage
+export interface LLMRequest extends LLMApiRequest {
+  model: ModelId  // 클라이언트에서는 ModelId union으로 더 좁게 타입 지정
 }
 
-interface LLMResponse {
-  text: string
+type LLMResponse = LLMApiResponse
+
+export interface LLMStreamResult {
   usage: { input_tokens: number; output_tokens: number }
+  stopReason?: string | null
 }
 
 function providerOf(model: ModelId): 'anthropic' | 'openai' | 'gemini' {
@@ -26,6 +28,45 @@ function providerOf(model: ModelId): 'anthropic' | 'openai' | 'gemini' {
 }
 
 const LLM_TIMEOUT_MS = 120_000
+
+const HTTP_ERROR_MSGS: Record<number, string> = {
+  429: 'API 요청 한도 초과 — 잠시 후 다시 시도하세요',
+  500: 'AI 서버 내부 오류 — 잠시 후 다시 시도하세요',
+  502: 'AI 서버 일시 불안정 — 잠시 후 다시 시도하세요',
+  503: 'AI 서비스 점검 중 — 잠시 후 다시 시도하세요',
+  413: '요청 내용이 너무 큽니다 — 메시지를 줄여 다시 시도하세요',
+}
+
+// ─── 태스크별 토큰 누적 추적 ─────────────────────────────────────────────────
+// taskId를 Map 키로 관리 — 전역 activeTaskId 없이 동시 태스크 안전하게 처리
+const _taskTokens = new Map<string, { inputTokens: number; outputTokens: number; estimatedCostUsd: number }>()
+
+export function beginTaskTokenTracking(taskId: string): void {
+  _taskTokens.set(taskId, { inputTokens: 0, outputTokens: 0, estimatedCostUsd: 0 })
+}
+
+export function finishTaskTokenTracking(taskId: string): { inputTokens: number; outputTokens: number; estimatedCostUsd: number } | null {
+  const usage = _taskTokens.get(taskId) ?? null
+  _taskTokens.delete(taskId)
+  return usage
+}
+
+function _accumulateTaskTokens(taskId: string | undefined, model: string, inputTokens: number, outputTokens: number): void {
+  if (!taskId) return
+  const cur = _taskTokens.get(taskId)
+  if (cur) {
+    cur.inputTokens += inputTokens
+    cur.outputTokens += outputTokens
+    cur.estimatedCostUsd += estimateCostUsd(model, inputTokens, outputTokens)
+  }
+}
+
+// MODEL_PRICING은 src/config/models.ts에서 import — 이 파일에서 중복 정의 없음
+
+export function estimateCostUsd(model: string, inputTokens: number, outputTokens: number): number {
+  const p = MODEL_PRICING[model] ?? { in: 3, out: 15 }
+  return (inputTokens * p.in + outputTokens * p.out) / 1_000_000
+}
 
 // ─── 호출 전 예산 사전 검사 ───────────────────────────────────────────────────
 function checkBudgetBeforeCall(): void {
@@ -68,16 +109,14 @@ function buildSystemWithLanguage(system: string): string {
   return system // 'auto' — 별도 지시 없음
 }
 
-export async function callLLM(req: LLMRequest): Promise<string> {
-  // 예산 사전 검사 (이미 소진 시 차단, 80% 이상 시 경고)
-  checkBudgetBeforeCall()
-
+// ─── 공통 fetch/timeout/에러 처리 헬퍼 ──────────────────────────────────────
+async function _fetchLLM(endpoint: string, req: LLMRequest): Promise<Response> {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), LLM_TIMEOUT_MS)
 
   let response: Response
   try {
-    response = await fetch('/api/llm', {
+    response = await fetch(endpoint, {
       method: 'POST',
       headers: apiHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({
@@ -94,7 +133,8 @@ export async function callLLM(req: LLMRequest): Promise<string> {
       ? `LLM 응답 시간 초과 (${LLM_TIMEOUT_MS / 1000}초)`
       : 'LLM 서버 연결 실패'
     useAgentStore.getState().addToast('error', `LLM 오류 (${req.model})`, msg)
-    throw new Error(msg)
+    recordError({ source: 'LLM', model: req.model, message: msg })
+    throw new Error(msg, { cause: err })
   }
   clearTimeout(timer)
 
@@ -103,32 +143,32 @@ export async function callLLM(req: LLMRequest): Promise<string> {
       notifySessionExpired()
       throw new Error('세션이 만료되었습니다. 다시 로그인하세요.')
     }
-    const err = await response.json().catch(() => ({ error: 'LLM 호출 실패' })) as { error: string }
-    const msg = err.error ?? 'LLM 호출 실패'
+    const httpFallback = HTTP_ERROR_MSGS[response.status] ?? `서버 오류 (HTTP ${response.status})`
+    const err = await response.json().catch(() => ({ error: httpFallback })) as { error: string }
+    const msg = err.error ?? httpFallback
     useAgentStore.getState().addToast('error', `LLM 오류 (${req.model})`, msg)
-    throw new Error(msg)
+    recordError({ source: 'LLM', model: req.model, message: msg, status: response.status })
+    throw new Error(msg, { cause: err })
   }
+
+  return response
+}
+
+export async function callLLM(req: LLMRequest, taskId?: string): Promise<string> {
+  checkBudgetBeforeCall()
+
+  const response = await _fetchLLM('/api/llm', req)
 
   const data = await response.json() as LLMResponse
   const prov = providerOf(req.model)
-  const total = data.usage.input_tokens + data.usage.output_tokens
+  const { input_tokens, output_tokens } = data.usage
+  const total = input_tokens + output_tokens
 
-  // 일별 토큰 사용량 기록 (사후 소비 기록)
   const store = useAgentStore.getState()
   store.checkAndConsumeTokenBudget(total)
-
-  store.recordProviderUsage(prov, {
-    inputTokens: data.usage.input_tokens,
-    outputTokens: data.usage.output_tokens,
-    totalTokens: total,
-    model: req.model,
-  })
-
-  useAgentStore.getState().addExecutionLog(
-    'llm',
-    req.model,
-    `in ${data.usage.input_tokens.toLocaleString()} / out ${data.usage.output_tokens.toLocaleString()} tokens`,
-  )
+  store.recordProviderUsage(prov, { inputTokens: input_tokens, outputTokens: output_tokens, totalTokens: total, model: req.model })
+  _accumulateTaskTokens(taskId, req.model, input_tokens, output_tokens)
+  store.addExecutionLog('llm', req.model, `in ${input_tokens.toLocaleString()} / out ${output_tokens.toLocaleString()} tokens`)
 
   return data.text
 }
@@ -137,33 +177,14 @@ export async function callLLM(req: LLMRequest): Promise<string> {
 export async function callLLMStream(
   req: LLMRequest,
   onDelta: (delta: string) => void,
-): Promise<void> {
+  taskId?: string,
+): Promise<LLMStreamResult> {
   checkBudgetBeforeCall()
 
-  const controller = new AbortController()
-  const timer = setTimeout(() => controller.abort(), LLM_TIMEOUT_MS)
+  const response = await _fetchLLM('/api/llm/stream', req)
 
-  let response: Response
-  try {
-    response = await fetch('/api/llm/stream', {
-      method: 'POST',
-      headers: apiHeaders({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify({ model: req.model, system: buildSystemWithLanguage(req.system), messages: req.messages, maxTokens: req.maxTokens }),
-      signal: controller.signal,
-    })
-  } catch (err) {
-    clearTimeout(timer)
-    const msg = err instanceof Error && err.name === 'AbortError'
-      ? `LLM 응답 시간 초과 (${LLM_TIMEOUT_MS / 1000}초)`
-      : 'LLM 서버 연결 실패'
-    useAgentStore.getState().addToast('error', `LLM 오류 (${req.model})`, msg)
-    throw new Error(msg)
-  }
-  clearTimeout(timer)
-
-  if (!response.ok || !response.body) {
-    const err = await response.json().catch(() => ({ error: 'LLM 스트리밍 실패' })) as { error: string }
-    const msg = err.error ?? 'LLM 스트리밍 실패'
+  if (!response.body) {
+    const msg = 'LLM 스트리밍 실패'
     useAgentStore.getState().addToast('error', `LLM 오류 (${req.model})`, msg)
     throw new Error(msg)
   }
@@ -173,6 +194,7 @@ export async function callLLMStream(
   let buffer = ''
   let inputTokens = 0
   let outputTokens = 0
+  let stopReason: string | null = null
 
   while (true) {
     const { done, value } = await reader.read()
@@ -190,14 +212,21 @@ export async function callLLMStream(
         const raw = line.slice(6).trim()
         if (raw) {
           try {
-            const parsed = JSON.parse(raw) as { text?: string; usage?: { input_tokens: number; output_tokens: number }; error?: string }
+            const parsed = JSON.parse(raw) as {
+              text?: string
+              usage?: { input_tokens: number; output_tokens: number }
+              stopReason?: string | null
+              error?: string
+            }
             if (currentEvent === 'delta' && parsed.text) {
               onDelta(parsed.text)
             } else if (currentEvent === 'done' && parsed.usage) {
               inputTokens = parsed.usage.input_tokens
               outputTokens = parsed.usage.output_tokens
+              stopReason = parsed.stopReason ?? null
             } else if (currentEvent === 'error' && parsed.error) {
               useAgentStore.getState().addToast('error', `LLM 오류 (${req.model})`, parsed.error)
+              recordError({ source: 'LLM 스트리밍', model: req.model, message: parsed.error })
               throw new Error(parsed.error)
             }
           } catch (e) {
@@ -213,20 +242,12 @@ export async function callLLMStream(
   const total = inputTokens + outputTokens
   const store = useAgentStore.getState()
   store.checkAndConsumeTokenBudget(total)
-  store.recordProviderUsage(providerOf(req.model), {
-    inputTokens, outputTokens, totalTokens: total, model: req.model,
-  })
+  store.recordProviderUsage(providerOf(req.model), { inputTokens, outputTokens, totalTokens: total, model: req.model })
+  _accumulateTaskTokens(taskId, req.model, inputTokens, outputTokens)
   store.addExecutionLog('llm', req.model, `stream in ${inputTokens.toLocaleString()} / out ${outputTokens.toLocaleString()} tokens`)
-}
 
-// 모델 뱃지 표시용
-export function modelLabel(model: ModelId): string {
-  if (model.startsWith('claude-opus'))   return '🟣 Claude Opus'
-  if (model.startsWith('claude-sonnet')) return '🟣 Claude Sonnet'
-  if (model.startsWith('claude-haiku'))  return '🟣 Claude Haiku'
-  if (model === 'gpt-4o')               return '🟢 GPT-4o'
-  if (model === 'gpt-4o-mini')          return '🟢 GPT-4o mini'
-  if (model === 'gemini-2.5-pro')        return '🔵 Gemini 2.5 Pro'
-  if (model === 'gemini-2.5-flash')     return '🔵 Gemini 2.5 Flash'
-  return model
+  return {
+    usage: { input_tokens: inputTokens, output_tokens: outputTokens },
+    stopReason,
+  }
 }

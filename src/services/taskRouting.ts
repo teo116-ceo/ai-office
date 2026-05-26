@@ -58,7 +58,7 @@ const DEPARTMENT_KEYWORDS: Record<DepartmentId, string[]> = {
   hr: ['@hr', '@인사', '@총무', 'hr', 'recruit', 'hiring', '인사', '채용', '총무', '급여', '4대보험', '근태', '홍보'],
   legal: ['@legal', '@법무', '@특허', 'legal', 'patent', 'trademark', '법무', '특허', '상표', '저작권', '계약서', '개인정보', '법률'],
   customer: ['@customer', '@고객', '@cs', 'customer', 'support', 'cs', '고객', '문의', '민원', '오류신고', '재발', '마크오류'],
-  b2g: ['@b2g', '@공공', '@기관', 'b2g', 'government', 'public', '공공기관', '조달', '용역', '시범사업', '제안공모', '교육부', '고용노동부'],
+  b2g: ['@b2g', '@공공', '@기관', 'b2g', 'government', 'public', '공공기관', '기관사업', '기관 영업', '기관영업', '기관대상', '공공사업', '조달', '용역', '시범사업', '제안공모', '입찰', '지자체', '정부부처', '교육부', '고용노동부'],
   expertsales: ['@expert', '@전문가', '@자격증영업', '전문가양성', '강사모집', '자격증세일즈', '수강생유치', '설명회'],
   global: ['@global', '@해외', '@글로벌', 'global', 'overseas', 'international', '해외', '글로벌', '현지화', '파트너십', '수출', '컨퍼런스'],
   trend: ['@trend', '@트렌드', '@동향', 'trend', 'insight', '트렌드', '동향', '시장분석', '최신', '이슈', '뉴스'],
@@ -115,6 +115,42 @@ export function resolveKeywordRouting(message: string): KeywordRoutingResult {
   return { explicitlyMentioned, inferred }
 }
 
+/**
+ * 키워드 없이 기본 배정될 때, 메시지 맥락에 따라 관련 부서를 추가로 포함한다.
+ * 기존의 고정 4개 대신 상황에 맞는 부서 조합을 반환한다.
+ */
+function resolveContextualDefaults(message: string): DepartmentId[] {
+  const lower = message.toLowerCase()
+
+  const contextRules: Array<{ keywords: string[]; dept: DepartmentId }> = [
+    { keywords: ['돈', '비용', '예산', '지출', '정산', '매출', '수익', '투자', '견적', '세금', '회계', '결제'], dept: 'finance' },
+    { keywords: ['사람', '채용', '직원', '인사', '급여', '계약직', '온보딩', '퇴사', '4대보험', '근태', '복지'], dept: 'hr' },
+    { keywords: ['계약', '법률', '특허', '저작권', '소송', '규정', '법적', '협약', '상표', '개인정보', 'nda'], dept: 'legal' },
+    { keywords: ['오류', '버그', '에러', '테스트', '검증', '품질', '재현', '수정', 'qa', '이슈', '크래시'], dept: 'qa' },
+    { keywords: ['마케팅', '홍보', '콘텐츠', 'sns', '캠페인', '브랜드', '광고', '포지셔닝', '채널', '타겟'], dept: 'marketing' },
+    { keywords: ['운영', '배포', '서버', '인프라', '백업', '알림', '모니터링', '라이선스', '권한', '자동화'], dept: 'devops' },
+    { keywords: ['강사', '수강생', '교육', '자격증', '커리큘럼', '강의', '과정', '교육생'], dept: 'support' },
+    { keywords: ['고객', '문의', '민원', 'cs', '불만', '환불', '고객사', '클레임', '재발'], dept: 'customer' },
+    { keywords: ['공공', '기관', '정부', '지자체', '조달', '입찰', '용역', '시범사업', '교육부', '고용노동부'], dept: 'b2g' },
+    { keywords: ['해외', '글로벌', '현지화', '파트너', '수출', '영어', '컨퍼런스', '해외진출'], dept: 'global' },
+    { keywords: ['트렌드', '동향', '시장분석', '뉴스', '이슈', '최신', '흐름', '거시'], dept: 'trend' },
+    { keywords: ['리서치', '인사이트', '시장조사', '경쟁사', '고객분석', '데이터 기반'], dept: 'presales' },
+    { keywords: ['전문가', '강사모집', '자격증 영업', '설명회', '수강생 유치'], dept: 'expertsales' },
+  ]
+
+  const matched = contextRules
+    .filter(({ keywords }) => keywords.some((kw) => lower.includes(kw)))
+    .map(({ dept }) => dept)
+
+  if (matched.length > 0) {
+    // 맥락에 맞는 부서 + 기본 핵심 부서(ceo는 항상 포함)
+    return Array.from(new Set(['ceo', ...matched, 'planning']))
+  }
+
+  // 완전 기본값
+  return ['ceo', 'planning', 'security', 'sales']
+}
+
 export function resolveByKeyword(message: string): DepartmentId[] {
   const directAgentRoutes = DIRECT_AGENT_ROUTE_KEYWORDS
     .filter(({ keywords }) => keywords.some((keyword) => message.includes(keyword)))
@@ -127,7 +163,7 @@ export function resolveByKeyword(message: string): DepartmentId[] {
   const { explicitlyMentioned, inferred } = resolveKeywordRouting(message)
   if (explicitlyMentioned.length > 0) return explicitlyMentioned
   if (inferred.length > 0) return inferred
-  return ['ceo', 'planning', 'security', 'sales']
+  return resolveContextualDefaults(message)
 }
 
 export function looksLikeMeetingSummon(message: string) {

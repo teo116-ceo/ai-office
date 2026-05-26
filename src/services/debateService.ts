@@ -1,9 +1,8 @@
 import { useAgentStore } from '@/store/agentStore'
-import { Agent, DepartmentId, DEPARTMENTS, UploadedFile } from '@/types'
+import { Agent, DepartmentId, DEPARTMENTS } from '@/types'
 import { AGENT_GROUND_RULES, AGENT_PROMPTS, resolveAgentPersonaPrompt } from './taskExecutionPrompts'
 import { buildDirectiveContext, shouldInterruptAgentWork, syncDirectiveAgentMessages } from './directives'
 import { callLLM } from './multiProviderApi'
-import { resolveByKeyword } from './taskRouting'
 import {
   buildTeamPlan,
   formatAssignmentRoster,
@@ -13,6 +12,8 @@ import {
   type TeamPlan,
 } from './teamCollaboration'
 import { formatAgentDisplayName, formatSystemDisplayName } from '@/utils/agentRoleMeta'
+
+type Stance = '찬성' | '반대'
 
 type DebateContribution = {
   agent: Agent
@@ -27,19 +28,13 @@ type Opinion = {
   content: string
 }
 
-function resolveDebateDepts(message: string): [DepartmentId, DepartmentId] {
-  const topic = message.replace('@토론', '').replace(/^토론:/i, '').trim()
-  const depts = resolveByKeyword(topic)
-  const a = depts[0] ?? 'planning'
-  const b = depts[1] ?? (a === 'security' ? 'development' : 'security')
-  return [a, b]
-}
 
 async function collectTeamOpinion(
   dept: DepartmentId,
   topic: string,
   round: '초기 의견' | '반론',
   counterOpinion?: Opinion,
+  stance?: Stance,
 ): Promise<Opinion | null> {
   const store = useAgentStore.getState()
   const teamPlan = buildTeamPlan(store.agents, dept, 'debate')
@@ -51,11 +46,15 @@ async function collectTeamOpinion(
     sender: teamPlan.coordinator.agent.id,
     senderName: formatAgentDisplayName(teamPlan.coordinator.agent),
     content: [
-      `${DEPARTMENTS[dept].name} 팀 ${round} 검토를 시작합니다.`,
+      `${DEPARTMENTS[dept].name} 팀 ${round} 검토를 시작합니다.${stance ? `\n배정 입장: ${stance}측` : ''}`,
       `참여 인원: ${formatParticipantRoster(teamPlan.participants)}`,
       `조정 방식: ${getCoordinatorLabel(teamPlan)} (${teamPlan.coordinator.agent.name})`,
+      '[결과 표시 순서]',
+      '1. 아래 역할에 따라 담당자가 [개별 의견]을 올립니다.',
+      '2. 팀원이 여러 명이면 [자동 조합]이 부서 공식 의견입니다.',
+      '3. 모든 부서 검토 후 CEO 채널에 쟁점 정리와 부서 간 토론 결과가 표시됩니다.',
       '[역할 분업]',
-      formatAssignmentRoster(teamPlan.assignments),
+      formatAssignmentRoster(teamPlan.assignments, teamPlan.mode),
     ].join('\n'),
     type: 'system',
     departmentIds: [dept],
@@ -68,6 +67,7 @@ async function collectTeamOpinion(
       round,
       counterOpinion,
       teamPlan,
+      stance,
     })),
   )
 
@@ -90,6 +90,7 @@ async function collectTeamOpinion(
     round,
     counterOpinion,
     contributions: successful,
+    stance,
   })
 
   return summary ?? toTeamOpinion(dept, successful[0])
@@ -101,12 +102,14 @@ async function collectIndividualOpinion({
   round,
   counterOpinion,
   teamPlan,
+  stance,
 }: {
   assignment: TeamAssignment
   topic: string
   round: '초기 의견' | '반론'
   counterOpinion?: Opinion
   teamPlan: TeamPlan
+  stance?: Stance
 }) {
   const { agent } = assignment
   const store = useAgentStore.getState()
@@ -120,10 +123,10 @@ async function collectIndividualOpinion({
       const content = await callLLM({
         model: agent.model,
         maxTokens: 1024,
-        system: buildDebateSystemPrompt(agent, teamPlan, assignment, round, 'individual'),
+        system: buildDebateSystemPrompt(agent, teamPlan, assignment, round, 'individual', stance),
         messages: [{
           role: 'user',
-          content: buildIndividualDebatePrompt(topic, round, counterOpinion, assignment),
+          content: buildIndividualDebatePrompt(topic, round, counterOpinion, assignment, stance),
         }],
       })
 
@@ -163,12 +166,14 @@ async function synthesizeTeamOpinion({
   round,
   counterOpinion,
   contributions,
+  stance,
 }: {
   teamPlan: TeamPlan
   topic: string
   round: '초기 의견' | '반론'
   counterOpinion?: Opinion
   contributions: DebateContribution[]
+  stance?: Stance
 }) {
   const coordinator = teamPlan.coordinator.agent
   const store = useAgentStore.getState()
@@ -179,10 +184,10 @@ async function synthesizeTeamOpinion({
     const content = await callLLM({
       model: coordinator.model,
       maxTokens: 1280,
-      system: buildDebateSystemPrompt(coordinator, teamPlan, teamPlan.coordinator, round, 'summary'),
+      system: buildDebateSystemPrompt(coordinator, teamPlan, teamPlan.coordinator, round, 'summary', stance),
       messages: [{
         role: 'user',
-        content: buildTeamDebatePrompt(topic, round, counterOpinion, teamPlan, contributions),
+        content: buildTeamDebatePrompt(topic, round, counterOpinion, teamPlan, contributions, stance),
       }],
     })
 
@@ -216,33 +221,151 @@ async function synthesizeTeamOpinion({
   }
 }
 
-function synthesize(topic: string, opinions: Opinion[]) {
+async function synthesize(topic: string, opinions: Opinion[], stances?: Record<string, Stance>) {
   const store = useAgentStore.getState()
+  const ceo = store.agents.find((agent) => agent.departmentId === 'ceo')
 
-  // 부서별 최종 입장 정리 (초기 의견 + 반론 중 마지막 것 우선)
+  // 부서별 최종 입장 정리 (반론이 있으면 반론이 최종 입장)
   const deptMap = new Map<DepartmentId, Opinion>()
   for (const opinion of opinions) {
-    deptMap.set(opinion.dept, opinion) // 나중 것(반론)이 덮어씀
+    deptMap.set(opinion.dept, opinion)
   }
 
-  const summaryLines: string[] = [`📋 토론 완료 — 주제: ${topic}`, '']
-  for (const [dept, opinion] of deptMap.entries()) {
-    summaryLines.push(`▸ ${DEPARTMENTS[dept].name} 최종 입장 (${opinion.agentName})`)
-    // 핵심만 2~3줄로 잘라서 표시
-    const preview = opinion.content.split('\n').slice(0, 3).join('\n')
-    summaryLines.push(preview)
-    summaryLines.push('')
-  }
-  summaryLines.push('— CEO(사용자)의 최종 결정을 기다립니다.')
+  const opinionBlocks = [...deptMap.entries()]
+    .map(([dept, opinion]) => {
+      const tag = stances?.[dept] ? ` [${stances[dept]}측]` : ''
+      return `=== ${DEPARTMENTS[dept].name}${tag} 최종 입장 (${opinion.agentName}) ===\n${opinion.content}`
+    })
+    .join('\n\n')
 
-  const ceo = store.agents.find((agent) => agent.departmentId === 'ceo')
+  // LLM이 CEO 관점에서 쟁점·합의점·결정 사항을 정리
+  const ceoSummary = await callLLM({
+    model: ceo?.model ?? 'claude-sonnet-4-6',
+    maxTokens: 1200,
+    system: '당신은 CEO입니다. 부서 간 토론 결과를 보고 받아 의사결정에 필요한 핵심 정보를 정리합니다. 중립적이고 명확하게 작성하되, CEO가 즉시 판단할 수 있도록 구체적으로 제시하세요.',
+    messages: [{
+      role: 'user',
+      content: [
+        `주제: ${topic}`,
+        '',
+        opinionBlocks,
+        '',
+        '아래 형식으로 정리하라:',
+        '',
+        '📌 핵심 쟁점',
+        '(각 부서 입장의 핵심 차이점을 2~3줄로)',
+        '',
+        '🟢 찬성측 최종 입장 요약',
+        '(찬성측 부서명과 핵심 주장 2~3줄)',
+        '',
+        '🔴 반대측 최종 입장 요약',
+        '(반대측 부서명과 핵심 주장 2~3줄)',
+        '',
+        '✅ 합의 가능한 부분',
+        '(공통적으로 동의하는 사항, 없으면 "없음")',
+        '',
+        '⚠️ 충돌 지점',
+        '(해결되지 않은 핵심 갈등 사항)',
+        '',
+        '📋 CEO 결정이 필요한 사항',
+        '1. (첫 번째 결정 사항)',
+        '2. (두 번째 결정 사항, 있으면)',
+        '',
+        '💡 판단 기준 제안',
+        '(어떤 기준으로 결정하면 좋을지 1~2줄)',
+      ].join('\n'),
+    }],
+  }).catch(() => null)
+
+  const content = ceoSummary
+    ? `📋 부서 간 토론 완료 — 주제: ${topic}\n\n${ceoSummary}`
+    : [
+        `📋 부서 간 토론 완료 — 주제: ${topic}`,
+        '',
+        opinionBlocks,
+        '',
+        '— CEO(사용자)의 최종 결정을 기다립니다.',
+      ].join('\n')
+
   store.addMessage({
     sender: ceo?.id ?? 'ceo-01',
-    senderName: formatSystemDisplayName('대표실', '토론 진행'),
-    content: summaryLines.join('\n'),
+    senderName: formatSystemDisplayName('대표실', '토론 결과'),
+    content,
     type: 'result',
     departmentIds: uniqueDepartments([...opinions.map((opinion) => opinion.dept)]),
   })
+}
+
+/**
+ * 크로스-부서 토론: 각 부서 대표(팀장)가 다른 부서 의견에 반론하고 CEO가 최종 정리
+ * modelDebate 대체 — 모델명 없이 실제 부원 이름으로 진행
+ */
+export async function runCrossDeptDebate(
+  topic: string,
+  deptOpinions: Array<{ dept: DepartmentId; content: string }>,
+  taskId: string,
+): Promise<string | null> {
+  if (deptOpinions.length === 0) return null
+
+  // 부서가 1개면 반론 없이 해당 부서 의견이 최종 결과
+  if (deptOpinions.length === 1) return deptOpinions[0].content
+
+  const store = useAgentStore.getState()
+  const ceo = store.agents.find((a) => a.departmentId === 'ceo')
+  const scopeDepts = uniqueDepartments(['ceo', ...deptOpinions.map((d) => d.dept)])
+
+  store.addMessage({
+    sender: ceo?.id ?? 'ceo-01',
+    senderName: ceo ? formatAgentDisplayName(ceo) : '대표 (CEO)',
+    content: [
+      '부서 간 상호 검토를 시작합니다.',
+      `참여 부서: ${deptOpinions.map((d) => DEPARTMENTS[d.dept].name).join(' · ')}`,
+      '각 부서 대표가 다른 부서 입장을 검토하고 반론합니다.',
+    ].join('\n'),
+    type: 'system',
+    departmentIds: scopeDepts,
+    taskId,
+  })
+
+  // 각 부서가 다른 모든 부서 의견을 보고 반론
+  const rebuttalResults = await Promise.all(
+    deptOpinions.map(async ({ dept }) => {
+      const otherDepts = deptOpinions.filter((d) => d.dept !== dept)
+      if (otherDepts.length === 0) return null
+
+      const combinedContent = otherDepts
+        .map((d) => `[${DEPARTMENTS[d.dept].name}]\n${d.content.slice(0, 500)}`)
+        .join('\n\n')
+
+      const counterOpinion: Opinion = {
+        dept: otherDepts[0].dept,
+        agentId: '',
+        agentName: otherDepts.map((d) => DEPARTMENTS[d.dept].name).join(' · '),
+        agentRole: '타 부서',
+        content: combinedContent,
+      }
+
+      return collectTeamOpinion(dept, topic, '반론', counterOpinion)
+    }),
+  )
+
+  const validRebuttals = rebuttalResults.filter(Boolean) as Opinion[]
+
+  // 반론이 있으면 반론 기준으로, 없으면 초기 의견 기준으로 최종 정리
+  if (validRebuttals.length > 0) {
+    await synthesize(topic, validRebuttals)
+    return validRebuttals.map((r) => r.content).join('\n\n')
+  }
+
+  const initialOpinions: Opinion[] = deptOpinions.map((d) => ({
+    dept: d.dept,
+    agentId: '',
+    agentName: DEPARTMENTS[d.dept].name,
+    agentRole: '부서 대표',
+    content: d.content,
+  }))
+  await synthesize(topic, initialOpinions)
+  return deptOpinions.map((d) => d.content).join('\n\n')
 }
 
 /**
@@ -298,78 +421,68 @@ export async function synthesizeDeptOpinions(
   }
 }
 
-export async function runDebate(message: string, _attachments: UploadedFile[] = []) {
-  const topic = message.replace('@토론', '').replace(/^토론:/i, '').trim()
-  const [deptA, deptB] = resolveDebateDepts(message)
-  const scopeDepartments = uniqueDepartments(['ceo', deptA, deptB])
 
-  const store = useAgentStore.getState()
-  const ceo = store.agents.find((agent) => agent.departmentId === 'ceo')
+const INDIVIDUAL_OUTPUT_FORMAT = `아래 형식 그대로 작성하라 (빈 항목 없이):
 
-  store.addMessage({
-    sender: 'user',
-    senderName: '사용자',
-    content: message,
-    type: 'task',
-    departmentIds: scopeDepartments,
-  })
+[입장] 찬성 / 반대 / 조건부 찬성 중 하나만 명시
+[핵심 근거]
+- 근거 1: (1~2문장)
+- 근거 2: (1~2문장)
+- 근거 3 (있으면): (1~2문장)
+[전제 조건] 이 입장을 유지하기 위해 반드시 충족되어야 하는 조건 1가지
+[한줄 결론] 행동 권고를 1문장으로`
 
-  if (ceo) {
-    store.addMessage({
-      sender: ceo.id,
-      senderName: formatAgentDisplayName(ceo),
-      content: `토론을 시작합니다: ${DEPARTMENTS[deptA].name} vs ${DEPARTMENTS[deptB].name}\n주제: ${topic}`,
-      type: 'system',
-      departmentIds: scopeDepartments,
-    })
-  }
+const REBUTTAL_OUTPUT_FORMAT = `아래 형식 그대로 작성하라 (빈 항목 없이):
 
-  const [opinionA, opinionB] = await Promise.all([
-    collectTeamOpinion(deptA, topic, '초기 의견'),
-    collectTeamOpinion(deptB, topic, '초기 의견'),
-  ])
-  if (!opinionA || !opinionB) return
-
-  const [rebuttalA, rebuttalB] = await Promise.all([
-    collectTeamOpinion(deptA, topic, '반론', opinionB),
-    collectTeamOpinion(deptB, topic, '반론', opinionA),
-  ])
-
-  const allOpinions = [opinionA, opinionB, rebuttalA, rebuttalB].filter(Boolean) as Opinion[]
-  synthesize(topic, allOpinions)
-}
+[입장 유지 여부] 기존 입장 유지 / 일부 수정 / 전환 중 하나
+[반론 포인트]
+- 상대 주장 약점 1: (구체적으로)
+- 상대 주장 약점 2 (있으면):
+[재확인 근거] 우리 입장이 옳은 이유 (1~2문장)
+[양보 가능 범위] 수용할 수 있는 조건이 있다면 명시, 없으면 "없음"
+[한줄 결론] 행동 권고를 1문장으로`
 
 function buildIndividualDebatePrompt(
   topic: string,
   round: '초기 의견' | '반론',
   counterOpinion: Opinion | undefined,
   assignment: TeamAssignment,
+  stance?: Stance,
 ) {
   if (round === '초기 의견') {
+    const outputFormat = stance
+      ? `배정 입장: ${stance} ← 반드시 이 입장을 유지하라\n\n아래 형식으로 작성하라:\n\n[입장] ${stance} (배정)\n[핵심 근거]\n- 근거 1: ${stance} 입장을 뒷받침하는 구체적 이유 (1~2문장)\n- 근거 2: (1~2문장)\n- 근거 3 (있으면):\n[예상 반론 대비] 상대측이 제기할 반론 1가지와 재반론\n[한줄 결론] 행동 권고 1문장`
+      : INDIVIDUAL_OUTPUT_FORMAT
     return [
       `토론 주제: ${topic}`,
-      '[자동 분업 영역]',
+      '[담당 영역]',
       assignment.workstream,
-      '위 역할 기준으로 지금 바로 핵심 주장과 근거를 작성하여 제출하라. 방향 제시가 아닌 확정된 입장을 내놓아라.',
+      outputFormat,
     ].join('\n\n')
   }
 
   if (!counterOpinion) {
+    const outputFormat = stance
+      ? `배정 입장: ${stance} ← 반드시 이 입장을 유지하라\n\n아래 형식으로 작성하라:\n\n[입장] ${stance} (배정)\n[핵심 근거]\n- 근거 1: ${stance} 입장을 뒷받침하는 구체적 이유 (1~2문장)\n- 근거 2: (1~2문장)\n- 근거 3 (있으면):\n[예상 반론 대비] 상대측이 제기할 반론 1가지와 재반론\n[한줄 결론] 행동 권고 1문장`
+      : INDIVIDUAL_OUTPUT_FORMAT
     return [
       `토론 주제: ${topic}`,
-      '[자동 분업 영역]',
+      '[담당 영역]',
       assignment.workstream,
-      '위 역할 기준으로 지금 바로 핵심 주장과 근거를 작성하여 제출하라. 방향 제시가 아닌 확정된 입장을 내놓아라.',
+      outputFormat,
     ].join('\n\n')
   }
 
+  const rebuttalFormat = stance
+    ? `배정 입장: ${stance} (유지) ← 이 입장에서 후퇴하지 마라\n\n아래 형식으로 작성하라:\n\n[입장 재확인] ${stance} (유지)\n[상대 주장 핵심 약점]\n- 약점 1: (구체적으로)\n- 약점 2 (있으면):\n[추가 강화 근거] 우리 ${stance} 입장을 더욱 강화하는 근거 (1~2문장)\n[양보 불가 조건] 절대 양보할 수 없는 전제 1가지\n[한줄 결론] 행동 권고 1문장`
+    : REBUTTAL_OUTPUT_FORMAT
   return [
     `토론 주제: ${topic}`,
-    '[자동 분업 영역]',
+    '[담당 영역]',
     assignment.workstream,
-    `상대 부서 요약 의견 (${DEPARTMENTS[counterOpinion.dept].name} / ${counterOpinion.agentName})`,
+    `[상대 부서 입장] ${DEPARTMENTS[counterOpinion.dept].name} / ${counterOpinion.agentName}`,
     counterOpinion.content,
-    '위 의견의 약점을 짚고 자신의 역할 영역 기준으로 반론을 지금 바로 작성하여 제출하라. 모호한 표현 없이 확정된 반론을 내놓아라.',
+    rebuttalFormat,
   ].join('\n\n')
 }
 
@@ -379,22 +492,29 @@ function buildTeamDebatePrompt(
   counterOpinion: Opinion | undefined,
   teamPlan: TeamPlan,
   contributions: DebateContribution[],
+  stance?: Stance,
 ) {
+  let requestSection: string
+  if (stance) {
+    requestSection = round === '반론'
+      ? `[${DEPARTMENTS[teamPlan.departmentId].name} 팀 공식 반론 정리]\n${DEPARTMENTS[teamPlan.departmentId].name} 팀은 ${stance}측입니다. 팀원 반론을 바탕으로 ${stance} 입장을 더욱 강화하는 공식 반론을 완성하라. 상대 약점 공격, 우리 입장 강화 근거, 양보 불가 조건을 포함하라.`
+      : `[${DEPARTMENTS[teamPlan.departmentId].name} 팀 공식 입장 정리]\n${DEPARTMENTS[teamPlan.departmentId].name} 팀은 ${stance}측으로 배정되었습니다. 팀원 의견을 바탕으로 ${stance} 입장의 공식 논거를 완성하라. 핵심 주장, 판단 근거, 상대방 예상 반론 대비를 포함하라.`
+  } else {
+    requestSection = `[${DEPARTMENTS[teamPlan.departmentId].name} 팀 공식 입장 정리]\n${round === '반론' ? REBUTTAL_OUTPUT_FORMAT : INDIVIDUAL_OUTPUT_FORMAT}`
+  }
+
   return [
     `토론 주제: ${topic}`,
     round === '반론' && counterOpinion
-      ? `상대 부서 요약 의견\n${DEPARTMENTS[counterOpinion.dept].name} / ${counterOpinion.agentName}\n${counterOpinion.content}`
+      ? `[상대 부서 입장]\n${DEPARTMENTS[counterOpinion.dept].name} / ${counterOpinion.agentName}\n${counterOpinion.content}`
       : '',
     '[참여 인원]',
     formatParticipantRoster(teamPlan.participants),
     '[역할 분업]',
-    formatAssignmentRoster(teamPlan.assignments),
-    '[팀원 메모]',
+    formatAssignmentRoster(teamPlan.assignments, teamPlan.mode),
+    '[팀원별 개별 의견]',
     ...contributions.map((item, index) => `${index + 1}. ${item.agent.name} (${item.agent.role})\n${item.content}`),
-    '[정리 요청]',
-    round === '반론'
-      ? `${DEPARTMENTS[teamPlan.departmentId].name} 팀의 공식 반론을 지금 바로 완성하여 제출하라. 공격 포인트, 유지 입장, 양보 불가 조건을 포함한 확정 반론을 내놓아라.`
-      : `${DEPARTMENTS[teamPlan.departmentId].name} 팀의 공식 초기 입장을 지금 바로 완성하여 제출하라. 핵심 주장, 판단 근거, 전제를 확정된 형태로 내놓아라.`,
+    requestSection,
   ].filter(Boolean).join('\n\n')
 }
 
@@ -404,6 +524,7 @@ function buildDebateSystemPrompt(
   assignment: TeamAssignment,
   round: '초기 의견' | '반론',
   mode: 'individual' | 'summary',
+  stance?: Stance,
 ) {
   const directiveContext = buildDirectiveContext({ departmentId: teamPlan.departmentId, mode: 'debate' })
   const collaborationInstruction = mode === 'summary'
@@ -416,6 +537,7 @@ function buildDebateSystemPrompt(
     `현재 역할: ${agent.role}`,
     collaborationInstruction,
     AGENT_GROUND_RULES,
+    stance ? `⚖️ 배정 입장: ${stance}측 — 이 입장을 논리적으로 최대한 강력하게 옹호하라. 개인적 견해가 달라도 배정된 역할에 충실하라.` : '',
     directiveContext,
     round === '반론'
       ? '상대 부서 논리의 약점을 짚고 지금 바로 반론을 완성하여 제출하라. 조건과 근거를 포함한 확정 반론을 내놓아라.'

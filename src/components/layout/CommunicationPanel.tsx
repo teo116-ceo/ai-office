@@ -1,6 +1,6 @@
 import { type ChangeEvent, useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { resolveDepartmentFloor } from '@/services/directives'
-import { runTask, runChannelMessage } from '@/services/agentOrchestrator'
+import { useTaskActions } from '@/hooks/useTaskActions'
 import { formatFileSize, prepareUploadedFiles } from '@/services/fileContext'
 import { exportMessages, exportMessage } from '@/services/exportService'
 import { useAgentStore } from '@/store/agentStore'
@@ -23,10 +23,28 @@ function useStreamingTick() {
   useEffect(() => subscribeToStreaming(tick), [])
 }
 
+// 에이전트 원문 메시지 여부 — 기본 접힘 대상
+function isRawAgentMessage(message: Message): boolean {
+  return message.type === 'result' || message.type === 'debate'
+}
+
+// 비서 보고 요약 여부 — 강조 표시
+function isBriefingSummary(message: Message): boolean {
+  return message.type === 'system' && message.senderName.includes('비서 보고')
+}
+
 export default function CommunicationPanel({ onClose }: CommunicationPanelProps) {
   const [input, setInput] = useState('')
   const [attachments, setAttachments] = useState<UploadedFile[]>([])
-  const [isLoading, setIsLoading] = useState(false)
+  const [expandedMessages, setExpandedMessages] = useState<Set<string>>(new Set())
+
+  const toggleExpanded = (id: string) =>
+    setExpandedMessages((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  const { submitTask, submitChannelMessage, isRunning: isLoading } = useTaskActions()
   const [isPreparingFiles, setIsPreparingFiles] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   useStreamingTick() // 스트리밍 캐시 변경 시 이 컴포넌트만 리렌더
@@ -46,6 +64,7 @@ export default function CommunicationPanel({ onClose }: CommunicationPanelProps)
   const bottomRef = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
     const element = scrollRef.current
@@ -80,6 +99,14 @@ export default function CommunicationPanel({ onClose }: CommunicationPanelProps)
     scrollToBottom('auto')
   }, [attachments, currentFloor, scrollToBottom])
 
+  useEffect(() => {
+    const textarea = textareaRef.current
+    if (!textarea) return
+
+    textarea.style.height = 'auto'
+    textarea.style.height = `${textarea.scrollHeight}px`
+  }, [input])
+
   const handleSelectFiles = async (event: ChangeEvent<HTMLInputElement>) => {
     const fileList = event.target.files
     if (!fileList || fileList.length === 0) return
@@ -108,18 +135,11 @@ export default function CommunicationPanel({ onClose }: CommunicationPanelProps)
     setInput('')
     setAttachments([])
     setUploadError(null)
-    setIsLoading(true)
-
-    try {
-      // 12F(대표실)에서만 전사 라우팅, 나머지 층은 해당 부서에만 전달
-      if (currentFloor === '11f' || floor.departments.length === 0) {
-        await runTask(taskPrompt, submittedAttachments)
-      } else {
-        // 해당 층의 첫 번째 부서로 전달 (단일 부서 층 대응)
-        await runChannelMessage(floor.departments[0], taskPrompt, submittedAttachments)
-      }
-    } finally {
-      setIsLoading(false)
+    // 12F(대표실)에서만 전사 라우팅, 나머지 층은 해당 부서에만 전달
+    if (currentFloor === '11f' || floor.departments.length === 0) {
+      await submitTask(taskPrompt, submittedAttachments)
+    } else {
+      await submitChannelMessage(floor.departments[0], taskPrompt, submittedAttachments)
     }
   }
 
@@ -169,7 +189,7 @@ export default function CommunicationPanel({ onClose }: CommunicationPanelProps)
             <p className="text-white text-sm font-semibold">팀 채널</p>
             <p className="text-office-text/60 text-xs">{`${floor.label} ${floor.name}`}</p>
             <p className="mt-1 text-[11px] text-office-text/40">
-              {floorTeamsLabel || '이 층에는 소속 부서가 없습니다.'}
+              {floorTeamsLabel || '이 구역에는 소속 부서가 없습니다.'}
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
@@ -200,9 +220,9 @@ export default function CommunicationPanel({ onClose }: CommunicationPanelProps)
       <div ref={scrollRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-y-contain p-4">
         {!hasChannel ? (
           <div className="mt-8 space-y-2 text-center text-sm text-office-text/50">
-            <p>이 층에는 팀 채널을 볼 수 있는 부서가 없습니다.</p>
+            <p>이 구역에는 팀 채널을 볼 수 있는 부서가 없습니다.</p>
             <div className="space-y-1 text-xs text-office-text/40">
-              <p>부서가 있는 층을 선택하면 해당 팀 대화만 볼 수 있습니다.</p>
+              <p>부서가 있는 구역을 선택하면 해당 팀 대화만 볼 수 있습니다.</p>
             </div>
           </div>
         ) : visibleMessages.length === 0 ? (
@@ -212,60 +232,125 @@ export default function CommunicationPanel({ onClose }: CommunicationPanelProps)
               {currentFloor === '2f' ? (
                 <p>대회의실, 중회의실, 소회의실 소집 요청이 들어오면 이 채널에 대화가 표시됩니다.</p>
               ) : (
-                <p>업무를 지시하면 배정된 층의 팀 채널에 대화가 표시됩니다.</p>
+                <p>업무를 지시하면 배정된 조직 구역의 팀 채널에 대화가 표시됩니다.</p>
               )}
               <p>첨부 파일도 이 채널에서 함께 확인됩니다.</p>
             </div>
           </div>
         ) : (
-          visibleMessages.map((message) => (
-            <div
-              key={message.id}
-              className={`rounded-lg p-3 text-sm ${
-                message.sender === 'user' ? 'bg-office-panel ml-4' : 'bg-office-panel/50 mr-4'
-              }`}
-            >
-              <div className="mb-1 flex items-center justify-between gap-2">
-                <p className="text-xs text-office-active">{message.senderName}</p>
-                {message.sender !== 'user' && (message.type === 'result' || message.type === 'debate') && (
+          visibleMessages.map((message) => {
+            const isRaw = isRawAgentMessage(message)
+            const isBriefing = isBriefingSummary(message)
+            const isExpanded = expandedMessages.has(message.id)
+            const content = message.streaming
+              ? (getStreamingContent(message.id) ?? message.content)
+              : message.content
+
+            // ── 비서 보고 요약 카드 ───────────────────────────────────────────
+            if (isBriefing) {
+              return (
+                <div
+                  key={message.id}
+                  className="rounded-xl border border-office-active/40 bg-office-active/10 p-4 text-sm mr-2"
+                >
+                  <div className="mb-2 flex items-center gap-2">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-office-active/60">비서 보고</span>
+                    <p className="text-xs font-semibold text-office-active">{message.senderName.replace(' (비서 보고)', '')}</p>
+                    <span className="ml-auto text-[10px] text-office-text/30">
+                      {message.timestamp.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                  <MessageContent content={content} streaming={message.streaming} />
+                </div>
+              )
+            }
+
+            // ── 에이전트 원문 (result/debate) — 기본 접힘 ────────────────────
+            if (isRaw) {
+              return (
+                <div
+                  key={message.id}
+                  className="rounded-lg border border-office-panel/50 bg-office-panel/30 mr-4 text-sm"
+                >
                   <button
                     type="button"
-                    onClick={() => exportMessage(message)}
-                    className="shrink-0 rounded border border-office-panel/60 px-1.5 py-0.5 text-[10px] text-office-text/50 transition-colors hover:border-office-active hover:text-white"
-                    title="이 메시지를 파일로 저장"
+                    onClick={() => toggleExpanded(message.id)}
+                    className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left hover:bg-white/5 transition-colors rounded-lg"
                   >
-                    저장
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-[10px] text-office-text/40 uppercase tracking-wide shrink-0">
+                        {message.type === 'debate' ? '토론' : '실행 결과'}
+                      </span>
+                      <p className="text-xs text-office-text/60 truncate">{message.senderName}</p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      {!isExpanded && (
+                        <span className="text-[10px] text-office-text/30 truncate max-w-[120px]">
+                          {content.slice(0, 40).replace(/\n/g, ' ')}…
+                        </span>
+                      )}
+                      <span className="text-[10px] text-office-text/40">{isExpanded ? '▲ 접기' : '▼ 펼치기'}</span>
+                    </div>
                   </button>
-                )}
-              </div>
-              <MessageContent
-                content={message.streaming ? (getStreamingContent(message.id) ?? message.content) : message.content}
-                streaming={message.streaming}
-              />
-              {message.attachments && message.attachments.length > 0 ? (
-                <div className="mt-3 space-y-2">
-                  {message.attachments.map((attachment) => (
-                    <AttachmentCard
-                      key={attachment.id}
-                      attachment={attachment}
-                      removable={false}
-                    />
-                  ))}
+                  {isExpanded && (
+                    <div className="border-t border-office-panel/40 px-3 pb-3 pt-2">
+                      <MessageContent content={content} streaming={message.streaming} />
+                      {message.attachments && message.attachments.length > 0 && (
+                        <div className="mt-3 space-y-2">
+                          {message.attachments.map((att) => (
+                            <AttachmentCard key={att.id} attachment={att} removable={false} />
+                          ))}
+                        </div>
+                      )}
+                      <div className="mt-2 flex items-center justify-between">
+                        <p className="text-[10px] text-office-text/30">
+                          {message.timestamp.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => exportMessage(message)}
+                          className="rounded border border-office-panel/60 px-1.5 py-0.5 text-[10px] text-office-text/50 hover:border-office-active hover:text-white transition-colors"
+                          title="이 메시지를 파일로 저장"
+                        >
+                          저장
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              ) : null}
-              <p className="mt-1 text-xs text-office-text/30">
-                {message.timestamp.toLocaleTimeString('ko-KR', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
-              </p>
-            </div>
-          ))
+              )
+            }
+
+            // ── 일반 메시지 ───────────────────────────────────────────────────
+            return (
+              <div
+                key={message.id}
+                className={`rounded-lg p-3 text-sm ${
+                  message.sender === 'user' ? 'bg-office-panel ml-4' : 'bg-office-panel/50 mr-4'
+                }`}
+              >
+                <div className="mb-1 flex items-center justify-between gap-2">
+                  <p className="text-xs text-office-active">{message.senderName}</p>
+                </div>
+                <MessageContent content={content} streaming={message.streaming} />
+                {message.attachments && message.attachments.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    {message.attachments.map((att) => (
+                      <AttachmentCard key={att.id} attachment={att} removable={false} />
+                    ))}
+                  </div>
+                )}
+                <p className="mt-1 text-xs text-office-text/30">
+                  {message.timestamp.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                </p>
+              </div>
+            )
+          })
         )}
 
         {isLoading ? (
           <div className="bg-office-panel/50 mr-4 rounded-lg p-3 text-sm">
-            <p className="mb-1 text-xs text-office-active">AI 오피스</p>
+            <p className="mb-1 text-xs text-office-active">AI Office</p>
             <p className="animate-pulse text-office-text/60">요청을 처리하는 중...</p>
           </div>
         ) : null}
@@ -332,6 +417,7 @@ export default function CommunicationPanel({ onClose }: CommunicationPanelProps)
 
         <div className="flex gap-2">
           <textarea
+            ref={textareaRef}
             value={input}
             onChange={(event) => setInput(event.target.value)}
             onKeyDown={(event) => {
@@ -341,14 +427,14 @@ export default function CommunicationPanel({ onClose }: CommunicationPanelProps)
               }
             }}
             placeholder="업무를 입력하세요... (Enter 전송 / Shift+Enter 줄바꿈)"
-            rows={3}
-            className="flex-1 resize-none rounded border border-office-panel/50 bg-office-panel px-3 py-2 text-sm text-office-text placeholder-office-text/40 focus:outline-none focus:border-office-active"
+            rows={1}
+            className="max-h-40 min-h-20 flex-1 resize-none overflow-y-auto rounded border border-office-panel/50 bg-office-panel px-3 py-2 text-sm text-office-text placeholder-office-text/40 focus:border-office-active focus:outline-none"
           />
           <button
             type="button"
             onClick={handleSubmit}
             disabled={!canSubmit}
-            title="입력한 요청과 첨부 파일을 AI 오피스로 전송합니다."
+            title="입력한 요청과 첨부 파일을 AI Office로 전송합니다."
             className="min-w-16 self-end rounded bg-office-active px-3 py-2 text-sm font-semibold text-office-bg transition-opacity hover:opacity-80 disabled:opacity-40"
           >
             전송

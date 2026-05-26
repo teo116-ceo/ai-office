@@ -5,6 +5,8 @@ import { callLLM } from './multiProviderApi'
 import { apiHeaders } from '@/utils/apiHeaders'
 
 const MAX_MEMORY_CONTEXT_ITEMS = 6
+// 부서 미일치 메모리 중 코사인 계산 대상 최대 수 (중요도 상위 순)
+const MAX_NON_DEPT_CANDIDATES = 50
 const MAX_MEMORY_SUMMARY_CHARS = 500
 const EMBEDDING_API = '/api/embeddings'
 
@@ -168,19 +170,29 @@ export async function searchRelevantMemories(
   const store = useAgentStore.getState()
   if (!store.memoryEnabled || store.memories.length === 0) return []
 
-  const memoriesWithEmbedding = store.memories.filter((m) => m.embedding && m.embedding.length > 0)
-  const memoriesWithoutEmbedding = store.memories.filter((m) => !m.embedding || m.embedding.length === 0)
+  // ── 부서 필터 선행: dept 일치 메모리는 전량 포함, 미일치는 중요도 상위만 ──
+  const deptMatched = store.memories.filter((m) =>
+    departments.some((d) => m.departments.includes(d))
+  )
+  const deptUnmatched = store.memories
+    .filter((m) => !departments.some((d) => m.departments.includes(d)))
+    .sort((a, b) => (b.importance ?? 0.5) - (a.importance ?? 0.5))
+    .slice(0, MAX_NON_DEPT_CANDIDATES)
+  const candidates = [...deptMatched, ...deptUnmatched]
+
+  const candidatesWithEmbedding = candidates.filter((m) => m.embedding && m.embedding.length > 0)
+  const candidatesWithoutEmbedding = candidates.filter((m) => !m.embedding || m.embedding.length === 0)
 
   const results: Array<{ mem: AgentMemory; score: number }> = []
 
   // ── 시맨틱 검색 (임베딩 있는 메모리) ──
-  if (memoriesWithEmbedding.length > 0) {
+  if (candidatesWithEmbedding.length > 0) {
     const queryEmbeddings = await fetchEmbeddings([query])
     const queryVec = queryEmbeddings?.[0]
 
-    for (const mem of memoriesWithEmbedding) {
+    for (const mem of candidatesWithEmbedding) {
       const baseScore = queryVec
-        ? cosineSimilarity(queryVec, mem.embedding!)
+        ? cosineSimilarity(queryVec, mem.embedding ?? [])
         : keywordScore(query, mem)
 
       const score = computeRuntimeScore(baseScore, mem, departments)
@@ -189,7 +201,7 @@ export async function searchRelevantMemories(
   }
 
   // ── 키워드 검색 (임베딩 없는 메모리) ──
-  for (const mem of memoriesWithoutEmbedding) {
+  for (const mem of candidatesWithoutEmbedding) {
     const baseScore = keywordScore(query, mem)
     if (baseScore > 0) {
       const score = computeRuntimeScore(baseScore, mem, departments)
@@ -217,7 +229,7 @@ export async function searchRelevantMemories(
     }
   }
 
-  const searchType = memoriesWithEmbedding.length > 0 ? '시맨틱' : '키워드'
+  const searchType = candidatesWithEmbedding.length > 0 ? '시맨틱' : '키워드'
   useAgentStore.getState().addExecutionLog(
     'memory',
     `메모리 검색 (${searchType})`,

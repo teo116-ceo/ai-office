@@ -1,3 +1,6 @@
+import type { ModelId } from '@/config/models'
+export type { ModelId }
+
 export type AgentStatus = 'idle' | 'working' | 'thinking' | 'debating' | 'moving'
 
 export type DivisionId =
@@ -49,9 +52,9 @@ export type FloorId =
   | '10f'  // 전략·비서
   | '11f'  // 대표실
 
-export type WorkspaceView = 'dashboard' | 'office' | 'tasks' | 'chat' | 'agents' | 'files' | 'settings'
+export type WorkspaceView = 'dashboard' | 'tasks' | 'chat' | 'agents' | 'files' | 'settings' | 'errors'
 
-export type ThemeMode = 'dark' | 'pastel-sky' | 'pastel-mint' | 'pastel-lavender' | 'pastel-peach' | 'pastel-pink'
+export type ThemeMode = 'dark' | 'warm-orange' | 'pastel-sky' | 'pastel-mint' | 'pastel-lavender' | 'pastel-peach' | 'pastel-pink'
 
 export type FontFamily = 'system' | 'noto-sans-kr' | 'ibm-plex-sans-kr' | 'gowun-dodum' | 'press-start-2p'
 
@@ -64,8 +67,6 @@ export type TaskComplexity = 'simple' | 'medium' | 'complex'
 export type ProviderId = 'anthropic' | 'openai' | 'gemini'
 
 export type DirectiveKind = 'announcement' | 'meeting'
-
-export type AgentPresenceMode = 'stretch' | 'walk' | 'coffee' | 'meeting_exit'
 
 export type MeetingRoom = 'large' | 'medium' | 'small'
 
@@ -173,24 +174,10 @@ export interface Agent {
   departmentId: DepartmentId
   name: string
   role: string
-  model:
-    | 'claude-opus-4-6'
-    | 'claude-sonnet-4-6'
-    | 'claude-haiku-4-5-20251001'
-    | 'gpt-4o'
-    | 'gpt-4o-mini'
-    | 'gemini-2.5-pro'
-    | 'gemini-2.5-flash'
+  model: ModelId
   status: AgentStatus
-  position: { x: number; y: number }
   message?: string
   color: string
-}
-
-export interface AgentPresence {
-  floorId: FloorId
-  tile: { col: number; row: number }
-  mode: AgentPresenceMode
 }
 
 export type UploadedFileKind = 'text' | 'binary' | 'archive'
@@ -289,6 +276,12 @@ export interface DepartmentResult {
   content: string
 }
 
+export interface TaskTokenUsage {
+  inputTokens: number
+  outputTokens: number
+  estimatedCostUsd: number
+}
+
 export interface Task {
   id: string
   title: string
@@ -306,6 +299,7 @@ export interface Task {
   revisionOf?: string    // 원본 태스크 ID (재작업인 경우)
   revisionNumber?: number // 버전 번호: 1=원본, 2=1차 수정, …
   reviews?: TaskReview[] // 교차 검토 결과 목록
+  tokenUsage?: TaskTokenUsage
 }
 
 export type TriggerCondition = 'always' | 'keywords' | 'file_saved'

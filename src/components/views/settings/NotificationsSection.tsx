@@ -31,8 +31,8 @@ export default function NotificationsSection({ webhookSettings, webhookUrlError,
     try {
       const isDiscord = url.includes('discord.com')
       const payload = isDiscord
-        ? { content: `✅ [${DEPARTMENTS[deptId].name}] AI 오피스 연결 테스트 메시지입니다.` }
-        : { text: `✅ [${DEPARTMENTS[deptId].name}] AI 오피스 연결 테스트 메시지입니다.` }
+        ? { content: `✅ [${DEPARTMENTS[deptId].name}] AI Office 연결 테스트 메시지입니다.` }
+        : { text: `✅ [${DEPARTMENTS[deptId].name}] AI Office 연결 테스트 메시지입니다.` }
 
       const res = await fetch('/api/webhook-proxy', {
         method: 'POST',
@@ -59,8 +59,8 @@ export default function NotificationsSection({ webhookSettings, webhookUrlError,
     try {
       const isDiscord = webhookSettings.url.includes('discord.com')
       const testPayload = isDiscord
-        ? { content: '✅ AI 오피스 연결 테스트 메시지입니다.' }
-        : { text: '✅ AI 오피스 연결 테스트 메시지입니다.' }
+        ? { content: '✅ AI Office 연결 테스트 메시지입니다.' }
+        : { text: '✅ AI Office 연결 테스트 메시지입니다.' }
 
       const res = await fetch('/api/webhook-proxy', {
         method: 'POST',

@@ -5,7 +5,7 @@ import {
   shouldInterruptAgentWork,
   syncDirectiveAgentMessages,
 } from './directives'
-import { callLLMStream } from './multiProviderApi'
+import { callLLMStream, type LLMMessage } from './multiProviderApi'
 import { setStreamingContent, clearStreamingContent } from './streamingCache'
 import {
   buildTeamPlan,
@@ -24,6 +24,7 @@ import {
   buildTeamSummaryPrompt,
   truncate,
 } from './taskExecutionPrompts'
+import { recordError } from './errorLog'
 
 // ─── 내부 타입 (agentOrchestrator.ts 와 triggerEngine.ts에서도 사용) ─────────────────
 export type ChainResult = {
@@ -40,6 +41,82 @@ export type TeamContribution = {
 // ─── 컨텍스트 윈도우 관리 상수 ──────────────────────────────────────────────────
 const THREAD_RECENT_COUNT = 2   // 전문 포함 태스크 수
 const THREAD_COMPRESS_AT = 5   // 이 수 초과 시 오래된 것 압축
+const STREAM_MAX_TOKENS = 16000
+const MAX_AUTO_CONTINUE_ROUNDS = 4
+const TRUNCATED_STOP_REASONS = new Set(['length', 'max_tokens', 'MAX_TOKENS'])
+const AUTO_CONTINUE_PROMPT = '이전 답변이 출력 한도 때문에 중간에서 멈췄습니다. 이미 작성한 내용을 반복하지 말고 마지막 문장 바로 다음부터 계속 작성하세요. 번호, 표, 문단 흐름을 유지하세요.'
+const AUTO_CONTINUE_LIMIT_NOTICE = '\n\n[출력 중단 안내] 자동 이어쓰기를 여러 번 시도했지만 제공사 출력 한도에 다시 도달했습니다. 같은 스레드에서 "이어서 계속"을 요청하면 남은 내용을 이어서 작성할 수 있습니다.'
+
+function hasOutputLimitStop(stopReason?: string | null) {
+  return Boolean(stopReason && TRUNCATED_STOP_REASONS.has(stopReason))
+}
+
+function notifyOutputLimitReached(stopReason?: string | null) {
+  if (!hasOutputLimitStop(stopReason)) return
+  useAgentStore.getState().addToast(
+    'warn',
+    'AI 결과 자동 이어쓰기 한계 도달',
+    '제공사 출력 한도에 여러 번 도달했습니다. 같은 스레드에서 "이어서 계속"을 요청하세요.',
+    8000,
+  )
+}
+
+function buildContinuationMessages(baseMessages: LLMMessage[], content: string): LLMMessage[] {
+  return [
+    ...baseMessages,
+    { role: 'assistant', content },
+    { role: 'user', content: AUTO_CONTINUE_PROMPT },
+  ]
+}
+
+async function streamWithAutoContinuation({
+  model,
+  system,
+  messages,
+  initialContent = '',
+  onContent,
+  taskId,
+}: {
+  model: Agent['model']
+  system: string
+  messages: LLMMessage[]
+  initialContent?: string
+  onContent: (content: string) => void
+  taskId?: string
+}) {
+  let content = initialContent
+  let currentMessages = initialContent ? buildContinuationMessages(messages, content) : messages
+  let stopReason: string | null | undefined = null
+
+  for (let round = 0; round <= MAX_AUTO_CONTINUE_ROUNDS; round += 1) {
+    const streamResult = await callLLMStream(
+      { model, maxTokens: STREAM_MAX_TOKENS, system, messages: currentMessages },
+      (delta) => {
+        content += delta
+        onContent(content)
+      },
+      taskId,
+    )
+
+    stopReason = streamResult.stopReason
+    if (!hasOutputLimitStop(stopReason)) {
+      return { content, stopReason, reachedAutoContinueLimit: false }
+    }
+
+    if (round === MAX_AUTO_CONTINUE_ROUNDS) {
+      notifyOutputLimitReached(stopReason)
+      return {
+        content: `${content}${AUTO_CONTINUE_LIMIT_NOTICE}`,
+        stopReason,
+        reachedAutoContinueLimit: true,
+      }
+    }
+
+    currentMessages = buildContinuationMessages(messages, content)
+  }
+
+  return { content, stopReason, reachedAutoContinueLimit: false }
+}
 
 export function buildThreadContext(tasks: import('@/types').Task[], threadId: string): string {
   const threadTasks = tasks
@@ -69,7 +146,7 @@ export function buildThreadContext(tasks: import('@/types').Task[], threadId: st
   }
 
   for (const t of recent) {
-    lines.push(`• "${t.title}": ${truncate(t.result!, 300)}`)
+    lines.push(`• "${t.title}": ${truncate(t.result ?? '', 300)}`)
   }
 
   lines.push('위 스레드 흐름과 연속선상에서 현재 요청을 처리하세요.')
@@ -161,9 +238,21 @@ async function collectDepartmentContribution({
       let toolSummary = ''
       const savedFiles: string[] = []
 
-      const toolResult = await callLLMWithTools({ model: agent.model, system: systemPrompt, messages: msgs, maxTokens: 8000 })
+      const toolResult = await callLLMWithTools({ model: agent.model, system: systemPrompt, messages: msgs, maxTokens: STREAM_MAX_TOKENS })
       if (toolResult) {
-        content = toolResult.text
+        if (hasOutputLimitStop(toolResult.stopReason)) {
+          const continued = await streamWithAutoContinuation({
+            model: agent.model,
+            system: systemPrompt,
+            messages: msgs,
+            initialContent: toolResult.text,
+            onContent: () => {},
+            taskId,
+          })
+          content = continued.content
+        } else {
+          content = toolResult.text
+        }
         toolSummary = formatToolUsageSummary(toolResult.toolCalls)
         for (const tc of toolResult.toolCalls) {
           if (tc.name === 'write_file' && tc.input.filename) savedFiles.push(tc.input.filename)
@@ -181,15 +270,23 @@ async function collectDepartmentContribution({
           channelFloorId,
           streaming: true,
         })
-        let streamed = ''
-        await callLLMStream(
-          { model: agent.model, maxTokens: 8000, system: systemPrompt, messages: msgs },
-          (delta) => {
-            streamed += delta
-            setStreamingContent(streamingMsgId, `[개별 검토]\n${streamed}`)
-          },
-        )
-        content = streamed
+        try {
+          const streamResult = await streamWithAutoContinuation({
+            model: agent.model,
+            system: systemPrompt,
+            messages: msgs,
+            onContent: (currentContent) => {
+              setStreamingContent(streamingMsgId, `[개별 검토]\n${currentContent}`)
+            },
+            taskId,
+          })
+          content = streamResult.content
+        } catch (streamErr) {
+          // 스트리밍 실패 시 플레이스홀더 정리 후 외부 catch로 전달
+          useAgentStore.getState().updateMessage(streamingMsgId, { content: '', streaming: false })
+          clearStreamingContent(streamingMsgId)
+          throw streamErr
+        }
         // 스트리밍 완료 — Zustand에 최종값 먼저 기록 후 캐시 제거
         // (순서 중요: 캐시를 먼저 지우면 rAF이 Zustand 업데이트보다 먼저 실행될 때
         //  streaming=true 상태에서 캐시가 없어 빈 화면이 순간 노출되는 문제 발생)
@@ -220,17 +317,19 @@ async function collectDepartmentContribution({
       }
       useAgentStore.getState().updateAgentStatus(agent.id, 'idle')
       return { contribution, interrupted: false, savedFiles }
-    } catch {
+    } catch (err) {
       if (shouldInterruptAgentWork(agent.id, directiveRevisionAtStart)) {
         syncDirectiveAgentMessages()
         return { contribution: null, interrupted: true, savedFiles: [] }
       }
 
       if (attempt === 1) {
+        const detail = err instanceof Error ? err.message : '알 수 없는 오류'
+        recordError({ source: '에이전트 실행', model: agent.model, message: `${agent.name}: ${detail}` })
         useAgentStore.getState().addMessage({
           sender: agent.id,
           senderName: formatAgentDisplayName(agent),
-          content: '두 번 시도했지만 개별 검토 의견을 정리하지 못했습니다.',
+          content: `두 번 시도했지만 개별 검토 의견을 정리하지 못했습니다. (오류: ${detail})`,
           type: 'result',
           taskId,
           departmentIds: [agent.departmentId],
@@ -266,30 +365,29 @@ async function summarizeDepartmentTeam({
   store.updateAgentStatus(coordinator.id, 'thinking', '팀 의견 자동 조합 중...')
   const directiveRevisionAtStart = store.directiveRevision
 
+  const summaryMsgId = useAgentStore.getState().addMessage({
+    sender: coordinator.id,
+    senderName: formatAgentDisplayName(coordinator),
+    content: '',
+    type: 'result',
+    taskId,
+    departmentIds: [teamPlan.departmentId],
+    channelFloorId,
+    streaming: true,
+  })
+
   try {
-    const summaryMsgId = useAgentStore.getState().addMessage({
-      sender: coordinator.id,
-      senderName: formatAgentDisplayName(coordinator),
-      content: '',
-      type: 'result',
-      taskId,
-      departmentIds: [teamPlan.departmentId],
-      channelFloorId,
-      streaming: true,
+    const summarySystemPrompt = buildAgentSystemPrompt(coordinator, hasAttachments, 'lead-summary', teamPlan, teamPlan.coordinator)
+    const summaryMessages = [{ role: 'user' as const, content: buildTeamSummaryPrompt(executionPrompt, chainContext, teamPlan, contributions) }]
+    const streamResult = await streamWithAutoContinuation({
+      model: coordinator.model,
+      system: summarySystemPrompt,
+      messages: summaryMessages,
+      onContent: (currentContent) => {
+        setStreamingContent(summaryMsgId, `[자동 조합 결과]\n${currentContent}`)
+      },
     })
-    let content = ''
-    await callLLMStream(
-      {
-        model: coordinator.model,
-        maxTokens: 8000,
-        system: buildAgentSystemPrompt(coordinator, hasAttachments, 'lead-summary', teamPlan, teamPlan.coordinator),
-        messages: [{ role: 'user', content: buildTeamSummaryPrompt(executionPrompt, chainContext, teamPlan, contributions) }],
-      },
-      (delta) => {
-        content += delta
-        setStreamingContent(summaryMsgId, `[자동 조합 결과]\n${content}`)
-      },
-    )
+    const content = streamResult.content
     useAgentStore.getState().updateMessage(summaryMsgId, {
       content: `[자동 조합 결과]\n${content}`,
       streaming: false,
@@ -305,6 +403,10 @@ async function summarizeDepartmentTeam({
     useAgentStore.getState().updateAgentStatus(coordinator.id, 'idle')
     return { summary, interrupted: false }
   } catch {
+    // 스트리밍 실패 시 플레이스홀더 정리
+    useAgentStore.getState().updateMessage(summaryMsgId, { content: '', streaming: false })
+    clearStreamingContent(summaryMsgId)
+
     if (shouldInterruptAgentWork(coordinator.id, directiveRevisionAtStart)) {
       syncDirectiveAgentMessages()
       return { summary: null, interrupted: true }
@@ -345,8 +447,11 @@ export async function executeDepartmentTeam({
       `${DEPARTMENTS[deptId].name} 팀 검토를 시작합니다.`,
       `참여 인원: ${formatParticipantRoster(teamPlan.participants)}`,
       `조정 방식: ${getCoordinatorLabel(teamPlan)} (${teamPlan.coordinator.agent.name})`,
+      '[결과 표시 순서]',
+      '1. 아래 역할에 따라 담당자가 차례대로 [개별 검토]를 올립니다.',
+      '2. 팀원이 여러 명이면 마지막에 [자동 조합 결과]가 부서 공식 결과로 제시됩니다.',
       '[역할 분업]',
-      formatAssignmentRoster(teamPlan.assignments),
+      formatAssignmentRoster(teamPlan.assignments, teamPlan.mode),
     ].join('\n'),
     type: 'system',
     taskId,
@@ -355,6 +460,8 @@ export async function executeDepartmentTeam({
   })
 
   // 팀 내 기여를 순차 실행 — 이전 기여자 결과를 다음 기여자가 참고
+  // (collectDepartmentContribution 내부에서 스트리밍 플레이스홀더를 생성하므로
+  //  예외 시 해당 함수가 직접 정리합니다)
   const contributionResults: Array<{ contribution: TeamContribution | null; interrupted: boolean; savedFiles: string[] }> = []
   const priorContributions: TeamContribution[] = []
 

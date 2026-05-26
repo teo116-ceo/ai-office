@@ -25,6 +25,9 @@ export default function ApiKeySetup({ onSaved }: Props) {
 
     try {
       if (window.electronAPI) {
+        // 재시작 후 자동 로그인을 위해 세션 토큰 임시 저장
+        const token = sessionStorage.getItem('ai-office-session-token')
+        if (token) await window.electronAPI.saveSessionForRelaunch(token)
         await window.electronAPI.saveApiKeys({ anthropic, openai, gemini })
       } else {
         const response = await fetch('/api/provider-keys', {
@@ -51,7 +54,7 @@ export default function ApiKeySetup({ onSaved }: Props) {
         className="flex w-96 flex-col gap-5 rounded-2xl border border-white/10 bg-[#141428] p-8"
       >
         <div className="text-center">
-          <div className="text-2xl font-bold text-white">AI 오피스</div>
+          <div className="text-2xl font-bold text-white">AI Office</div>
           <div className="mt-1 text-xs text-white/40">
             사용할 AI 제공사의 API 키를 입력하세요. 최소 1개 필요합니다.
           </div>

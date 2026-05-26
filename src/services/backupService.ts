@@ -2,8 +2,8 @@ import { notifySessionExpired } from '@/services/sessionService'
 import { apiHeaders } from '@/utils/apiHeaders'
 
 const STORE_KEY = 'ai-office-store'
-const AUTO_BACKUP_INTERVAL_MS = 30 * 60 * 1000
-const AUTO_BACKUP_FIRST_RUN_DELAY_MS = 5 * 60 * 1000
+const AUTO_BACKUP_INTERVAL_MS = 5 * 60 * 1000
+const AUTO_BACKUP_FIRST_RUN_DELAY_MS = 60 * 1000
 
 let autoBackupTimer: ReturnType<typeof setInterval> | null = null
 let autoBackupFirstRunTimer: ReturnType<typeof setTimeout> | null = null

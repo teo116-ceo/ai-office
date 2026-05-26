@@ -5,6 +5,7 @@ import { useShallow } from 'zustand/react/shallow'
 import { FLOORS, FloorId, Message, Task, WorkspaceView } from '@/types'
 import { formatTime } from '@/utils/dateFormat'
 import { repairLegacyTaskTitle } from '@/utils/taskTitle'
+import { subscribeSyncState, getSyncState, type SyncStatus } from '@/services/stateSync'
 
 type NotificationItem = {
   id: string
@@ -17,12 +18,12 @@ type NotificationItem = {
 
 const VIEW_LABEL: Record<WorkspaceView, string> = {
   dashboard: '대시보드',
-  office: 'AI 오피스',
   tasks: '작업 관리',
   chat: '팀 채팅',
   agents: '에이전트',
   files: '결과 파일',
   settings: '설정',
+  errors: '오류 기록',
 }
 
 const FLOOR_ORDER: FloorId[] = ['11f', '10f', '9f', '8f', '7f', '6f', '5f', '4f', '3f', '2f', '1f']
@@ -84,7 +85,7 @@ export default function Header() {
       description: collapseMessage(message.content),
       time: message.timestamp,
       floorId: resolveMessageFloor(message),
-      targetView: resolveMessageFloor(message) ? 'office' as const : 'chat' as const,
+      targetView: 'chat' as const,
     }))
 
     return [...taskItems, ...messageItems]
@@ -127,8 +128,8 @@ export default function Header() {
     })
     if (floorMatch) {
       setCurrentFloor(floorMatch)
-      setActiveView('office')
-      setSearchHint(`${FLOORS[floorMatch].label} ${FLOORS[floorMatch].name}로 이동했습니다.`)
+      setActiveView('dashboard')
+      setSearchHint(`${FLOORS[floorMatch].label} ${FLOORS[floorMatch].name} 구역으로 이동했습니다.`)
       return
     }
 
@@ -138,8 +139,8 @@ export default function Header() {
     if (agentMatch) {
       const floorId = resolveAgentFloor(agentMatch)
       setCurrentFloor(floorId)
-      setActiveView('office')
-      setSearchHint(`${agentMatch.name}이 있는 ${FLOORS[floorId].label}로 이동했습니다.`)
+      setActiveView('dashboard')
+      setSearchHint(`${agentMatch.name}이 있는 ${FLOORS[floorId].label} 구역으로 이동했습니다.`)
       return
     }
 
@@ -148,8 +149,8 @@ export default function Header() {
       const floorId = resolveMessageFloor(messageMatch)
       if (floorId) {
         setCurrentFloor(floorId)
-        setActiveView('office')
-        setSearchHint(`관련 대화가 있는 ${FLOORS[floorId].label}로 이동했습니다.`)
+        setActiveView('dashboard')
+        setSearchHint(`관련 대화가 있는 ${FLOORS[floorId].label} 구역으로 이동했습니다.`)
       } else {
         setActiveView('chat')
         setSearchHint('관련 대화를 팀 채팅 화면에서 확인할 수 있습니다.')
@@ -157,7 +158,7 @@ export default function Header() {
       return
     }
 
-    setSearchHint('일치하는 층, 에이전트, 대화를 찾지 못했습니다.')
+    setSearchHint('일치하는 구역, 에이전트, 대화를 찾지 못했습니다.')
   }
 
   return (
@@ -165,18 +166,18 @@ export default function Header() {
       <div className="flex h-full items-center justify-between px-4">
         <div className="flex items-center gap-3">
           <div>
-            <h1 className="font-semibold text-white">AI 오피스</h1>
+            <h1 className="font-semibold text-white">AI Office</h1>
             <p className="text-[11px] text-office-text/40">{VIEW_LABEL[activeView]}</p>
           </div>
 
-          <div ref={editorRef} className="relative">
+          <div ref={editorRef} className="relative md:hidden">
             <button
               type="button"
               onClick={() => {
                 setIsEditorOpen((current) => !current)
                 setIsNotificationsOpen(false)
               }}
-              title="층 이동, 화면 전환, 테마 변경 메뉴를 엽니다."
+              title="조직 구역 이동, 화면 전환, 테마 변경 메뉴를 엽니다."
               className="flex items-center gap-2 rounded bg-office-panel px-3 py-1.5 text-sm text-office-active transition-colors hover:bg-office-panel/80"
             >
               <span>바로가기</span>
@@ -187,13 +188,13 @@ export default function Header() {
                 <div>
                   <p className="text-sm font-semibold text-white">빠른 이동</p>
                   <p className="mt-1 text-xs text-office-text/50">
-                    층 이동과 화면 전환, 테마를 빠르게 바꿀 수 있습니다.
+                    조직 구역과 화면, 테마를 빠르게 바꿀 수 있습니다.
                   </p>
                 </div>
 
                 <div className="mt-4 space-y-4">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-wider text-office-text/40">층 바로가기</p>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-office-text/40">조직 구역</p>
                     <div className="mt-2 grid grid-cols-4 gap-2">
                       {FLOOR_ORDER.map((floorId) => (
                         <button
@@ -201,10 +202,10 @@ export default function Header() {
                           type="button"
                           onClick={() => {
                             setCurrentFloor(floorId)
-                            setActiveView('office')
+                            setActiveView('dashboard')
                             setIsEditorOpen(false)
                           }}
-                          title={`${FLOORS[floorId].label} ${FLOORS[floorId].name}층으로 이동합니다.`}
+                          title={`${FLOORS[floorId].label} ${FLOORS[floorId].name} 구역으로 이동합니다.`}
                           className={`rounded-lg border px-2 py-2 text-xs transition-colors ${
                             currentFloor === floorId
                               ? 'border-office-active bg-office-active/20 text-office-active'
@@ -258,7 +259,7 @@ export default function Header() {
                   quickSearch()
                 }
               }}
-              placeholder="층, 에이전트, 대화 검색..."
+              placeholder="구역, 에이전트, 대화 검색..."
               className="w-52 rounded border border-office-panel/50 bg-office-panel px-3 py-1.5 text-sm text-office-text placeholder-office-text/40 focus:border-office-active focus:outline-none"
             />
             {searchHint ? (
@@ -277,6 +278,8 @@ export default function Header() {
           >
             🎨
           </button>
+
+          <SyncIndicator />
 
           <div ref={notificationsRef} className="relative">
             <button
@@ -319,7 +322,7 @@ export default function Header() {
                         setActiveView(item.targetView)
                         setIsNotificationsOpen(false)
                       }}
-                      title="이 알림이 발생한 화면이나 층으로 이동합니다."
+                      title="이 알림이 발생한 화면이나 조직 구역으로 이동합니다."
                       className="w-full rounded-xl border border-office-panel/70 bg-office-panel/50 px-4 py-3 text-left transition-colors hover:border-office-active hover:bg-office-panel/80"
                     >
                       <div className="flex items-center justify-between gap-3">
@@ -403,4 +406,35 @@ function resolveMessageFloor(message: Message): FloorId | undefined {
   }
 
   return undefined
+}
+
+function SyncIndicator() {
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>(getSyncState().status)
+  const [errorMsg, setErrorMsg] = useState<string | undefined>(getSyncState().errorMsg)
+
+  useEffect(() => {
+    return subscribeSyncState((s) => {
+      setSyncStatus(s.status)
+      setErrorMsg(s.errorMsg)
+    })
+  }, [])
+
+  if (syncStatus === 'idle') return null
+
+  const config: Record<Exclude<SyncStatus, 'idle'>, { dot: string; label: string }> = {
+    syncing: { dot: 'bg-blue-400 animate-pulse',  label: '동기화 중' },
+    ok:      { dot: 'bg-emerald-400',             label: '저장됨' },
+    error:   { dot: 'bg-red-400',                 label: '동기화 실패' },
+  }
+  const { dot, label } = config[syncStatus as Exclude<SyncStatus, 'idle'>]
+
+  return (
+    <span
+      title={syncStatus === 'error' ? (errorMsg ?? '서버에 저장하지 못했습니다. 데이터는 로컬에 보존됩니다.') : label}
+      className="hidden md:flex items-center gap-1.5 text-[10px] text-office-text/50 cursor-default select-none"
+    >
+      <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />
+      {label}
+    </span>
+  )
 }

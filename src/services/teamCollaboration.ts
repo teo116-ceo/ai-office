@@ -426,10 +426,12 @@ export function formatParticipantRoster(agents: Agent[]) {
   return agents.map((agent) => `${agent.name}(${agent.role})`).join(', ')
 }
 
-export function formatAssignmentRoster(assignments: TeamAssignment[]) {
+export function formatAssignmentRoster(assignments: TeamAssignment[], mode?: CollaborationMode) {
+  const label = mode === 'debate' ? '담당 관점' : '담당 작업'
+
   return assignments
     .map((assignment, index) => (
-      `${index + 1}. ${assignment.agent.name} (${assignment.agent.role})${assignment.isCoordinator ? ' [조정]' : ''}\n담당: ${assignment.workstream}`
+      `${index + 1}. ${assignment.agent.name} (${assignment.agent.role})${assignment.isCoordinator ? ' [조정]' : ''}\n${label}: ${assignment.workstream}`
     ))
     .join('\n')
 }

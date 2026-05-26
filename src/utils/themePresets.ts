@@ -15,6 +15,12 @@ export const THEME_PRESETS: ThemePreset[] = [
     swatches: ['#0f172a', '#1e293b', '#64ffda'],
   },
   {
+    id: 'warm-orange',
+    label: '웜 오렌지',
+    description: '오프화이트 배경에 오렌지 포인트, AI Office 사이트 색감',
+    swatches: ['#f7f5f0', '#ffffff', '#e8590c'],
+  },
+  {
     id: 'pastel-sky',
     label: '스카이',
     description: '연한 하늘색과 크림 톤이 섞인 밝은 테마',

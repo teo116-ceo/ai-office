@@ -6,9 +6,6 @@ import { useAgentStore } from '@/store/agentStore'
 import { useShallow } from 'zustand/react/shallow'
 import Sidebar from '@/components/layout/Sidebar'
 import Header from '@/components/layout/Header'
-import OfficeCanvas from '@/components/office/OfficeCanvas'
-import FloorNav from '@/components/office/FloorNav'
-import CommunicationPanel from '@/components/layout/CommunicationPanel'
 import MobileTaskInputBar from '@/components/layout/MobileTaskInputBar'
 import ToastContainer from '@/components/ui/ToastContainer'
 import ApiKeySetup from '@/components/ui/ApiKeySetup'
@@ -23,6 +20,8 @@ import { startAutoBackup, stopAutoBackup } from '@/services/backupService'
 import { initServerSync } from '@/services/stateSync'
 import { enableAutoButtonTitles } from '@/utils/autoButtonTitle'
 import { apiHeaders } from '@/utils/apiHeaders'
+import { registerUpdaterListeners } from '@/utils/updaterListeners'
+import { UpdateBanner } from '@/components/ui/UpdateBanner'
 
 const isElectron = typeof window !== 'undefined' && 'electronAPI' in window
 
@@ -32,31 +31,78 @@ const TeamChatView = lazy(() => import('@/components/views/TeamChatView'))
 const AgentsView = lazy(() => import('@/components/views/AgentsView'))
 const FilesView = lazy(() => import('@/components/views/FilesView'))
 const SettingsView = lazy(() => import('@/components/views/SettingsView'))
+const ErrorLogView = lazy(() => import('@/components/views/ErrorLogView'))
 
-class ErrorBoundary extends Component<{ children: ReactNode }, { error: string | null }> {
-  state = { error: null }
+class ErrorBoundary extends Component<{ children: ReactNode; resetKey?: string }, { error: Error | null }> {
+  state: { error: Error | null } = { error: null }
 
   static getDerivedStateFromError(error: Error) {
-    return { error: `${error.message}\n${error.stack}` }
+    return { error }
+  }
+
+  componentDidUpdate(prevProps: { resetKey?: string }) {
+    if (prevProps.resetKey !== this.props.resetKey && this.state.error) {
+      this.setState({ error: null })
+    }
   }
 
   render() {
     if (this.state.error) {
+      const isDev = import.meta.env.DEV
       return (
         <div
           style={{
-            padding: 24,
-            color: '#ff4466',
+            padding: 32,
             background: '#1a1a2e',
             minHeight: '100dvh',
-            fontFamily: 'monospace',
-            whiteSpace: 'pre-wrap',
-            fontSize: 13,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 16,
           }}
         >
-          <b>React 오류 발생:</b>
-          {'\n'}
-          {this.state.error}
+          <p style={{ color: '#ff4466', fontWeight: 700, fontSize: 16 }}>
+            예기치 못한 오류가 발생했습니다
+          </p>
+          {isDev ? (
+            <pre
+              style={{
+                color: '#ff8899',
+                background: '#0d0d1a',
+                padding: 16,
+                borderRadius: 8,
+                fontSize: 12,
+                whiteSpace: 'pre-wrap',
+                maxWidth: 720,
+                width: '100%',
+                overflowX: 'auto',
+              }}
+            >
+              {this.state.error.message}
+              {'\n'}
+              {this.state.error.stack}
+            </pre>
+          ) : (
+            <p style={{ color: '#aaa', fontSize: 13 }}>
+              {this.state.error.message}
+            </p>
+          )}
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            style={{
+              padding: '8px 20px',
+              background: '#0057ff',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 8,
+              fontSize: 14,
+              cursor: 'pointer',
+            }}
+          >
+            새로고침
+          </button>
         </div>
       )
     }
@@ -74,9 +120,7 @@ export default function App() {
   const [sessionExpired, setSessionExpired] = useState(false)
   const [loginError, setLoginError] = useState<string | null>(null)
   const [loginLoading, setLoginLoading] = useState(false)
-  const [remember, setRemember] = useState(true)
   const [rememberEmail, setRememberEmail] = useState(() => localStorage.getItem('ai-office-remember-email') === 'true')
-  const [isCommunicationPanelOpen, setIsCommunicationPanelOpen] = useState(false)
   const emailRef = useRef<HTMLInputElement>(null)
   const passwordRef = useRef<HTMLInputElement>(null)
 
@@ -99,6 +143,20 @@ export default function App() {
     })
 
     void (async () => {
+      if (isElectron && window.electronAPI) {
+        // API 키 저장 후 재시작 시 세션 토큰 복원 (로그인 화면 건너뜀)
+        const relaunchToken = await window.electronAPI.getSessionForRelaunch()
+        if (relaunchToken) {
+          sessionStorage.setItem('ai-office-session-token', relaunchToken)
+        }
+
+        // 첫 설치 감지: API 키가 없으면 세션만 초기화 (작업 데이터는 유지)
+        const has = await window.electronAPI.hasApiKeys()
+        if (!has) {
+          sessionStorage.clear()
+        }
+      }
+
       const stillValid = await validateExistingSession()
       if (stillValid) {
         setSessionState('ready')
@@ -109,7 +167,7 @@ export default function App() {
       setSessionState(needsLogin ? 'login' : 'ready')
     })()
   }, [])
-
+  // 이메일 저장 기능: API 키가 있는 기존 설치에서만 이메일 pre-fill
   useEffect(() => {
     if (sessionState !== 'login') return
     const saved = localStorage.getItem('ai-office-remember-email') === 'true'
@@ -125,7 +183,15 @@ export default function App() {
       try {
         if (isElectron && window.electronAPI) {
           const has = await window.electronAPI.hasApiKeys()
-          setApiKeyState(has ? 'done' : 'needed')
+          if (!has) {
+            // API 키가 없으면 무조건 입력 화면
+            setApiKeyState('needed')
+            return
+          }
+          // API 키가 있어도 설정 완료 마커가 없으면 입력 화면 표시
+          // (이전 버전 잔류 데이터, 언인스톨 후 재설치 등 처리)
+          const confirmed = await window.electronAPI.hasConfirmedSetup()
+          setApiKeyState(confirmed ? 'done' : 'needed')
           return
         }
 
@@ -151,6 +217,10 @@ export default function App() {
 
   useEffect(() => enableAutoButtonTitles(), [])
 
+  useEffect(() => {
+    if (isElectron) registerUpdaterListeners()
+  }, [])
+
   const handleLogin = async (event: React.FormEvent) => {
     event.preventDefault()
     const email = emailRef.current?.value.trim() ?? ''
@@ -160,15 +230,10 @@ export default function App() {
     setLoginLoading(true)
     setLoginError(null)
 
-    const result = await startSession(email, password, remember)
+    const result = await startSession(email, password)
     if (result.ok) {
+      // 이메일 저장 처리
       const LAST_EMAIL_KEY = 'ai-office-last-email'
-      const lastEmail = localStorage.getItem(LAST_EMAIL_KEY)
-      if (lastEmail && lastEmail !== email.toLowerCase()) {
-        const store = useAgentStore.getState()
-        store.setWebhookSettings({ url: '', enabled: false, onTaskComplete: true, onTaskFail: false, onDailyBriefing: false, departmentWebhooks: {} })
-        store.setNotionSettings({ token: '', databaseId: '', enabled: false, departmentDatabases: {}, onTaskComplete: true, onTaskFail: false })
-      }
       localStorage.setItem(LAST_EMAIL_KEY, email.toLowerCase())
       if (rememberEmail) {
         localStorage.setItem('ai-office-remember-email', 'true')
@@ -241,24 +306,6 @@ export default function App() {
     document.documentElement.style.fontSize = sizeMap[fontSize] ?? '16px'
   }, [fontSize])
 
-  useEffect(() => {
-    if (activeView === 'office') return
-    setIsCommunicationPanelOpen(false)
-  }, [activeView])
-
-  useEffect(() => {
-    if (!isCommunicationPanelOpen) return
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setIsCommunicationPanelOpen(false)
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isCommunicationPanelOpen])
-
   if (sessionState === 'loading') {
     return (
       <div className="flex h-dvh w-screen items-center justify-center bg-[#0d0d1a]">
@@ -303,26 +350,15 @@ export default function App() {
             className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-white/30 outline-none focus:border-white/30"
           />
 
-          <div className="flex flex-col gap-2">
-            <label className="flex cursor-pointer items-center gap-2 select-none">
-              <input
-                type="checkbox"
-                checked={rememberEmail}
-                onChange={(event) => setRememberEmail(event.target.checked)}
-                className="h-4 w-4 rounded accent-[#ff2d55]"
-              />
-              <span className="text-xs text-white/50">이메일 저장</span>
-            </label>
-            <label className="flex cursor-pointer items-center gap-2 select-none">
-              <input
-                type="checkbox"
-                checked={remember}
-                onChange={(event) => setRemember(event.target.checked)}
-                className="h-4 w-4 rounded accent-[#ff2d55]"
-              />
-              <span className="text-xs text-white/50">로그인 유지 (브라우저를 닫아도 유지)</span>
-            </label>
-          </div>
+          <label className="flex cursor-pointer items-center gap-2 select-none">
+            <input
+              type="checkbox"
+              checked={rememberEmail}
+              onChange={(e) => setRememberEmail(e.target.checked)}
+              className="h-4 w-4 rounded accent-[#ff2d55]"
+            />
+            <span className="text-xs text-white/50">이메일 저장</span>
+          </label>
 
           {loginError && (
             <div className="rounded-lg bg-red-500/10 px-3 py-2 text-xs text-red-400">
@@ -355,44 +391,14 @@ export default function App() {
   }
 
   return (
-    <ErrorBoundary>
+    <ErrorBoundary resetKey={activeView}>
       <div className="flex h-dvh w-screen overflow-hidden bg-office-bg">
         <Sidebar />
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <UpdateBanner />
           <Header />
           <main className="flex min-h-0 flex-1 overflow-hidden">
-            {activeView === 'office' ? (
-              <>
-                {/* 데스크톱: 항상 나란히 */}
-                <div className="hidden min-h-0 flex-1 overflow-hidden md:flex">
-                  <OfficeCanvas
-                    isCommunicationPanelOpen={isCommunicationPanelOpen}
-                    onToggleCommunicationPanel={() => setIsCommunicationPanelOpen((current) => !current)}
-                  />
-                  <FloorNav />
-                  {isCommunicationPanelOpen && (
-                    <CommunicationPanel onClose={() => setIsCommunicationPanelOpen(false)} />
-                  )}
-                </div>
-                {/* 모바일: 채팅창 닫힘 = 캔버스+층탐색 / 열림 = 층탐색+채팅 */}
-                <div className="flex min-h-0 flex-1 overflow-hidden md:hidden">
-                  {isCommunicationPanelOpen ? (
-                    <>
-                      <FloorNav />
-                      <CommunicationPanel onClose={() => setIsCommunicationPanelOpen(false)} />
-                    </>
-                  ) : (
-                    <>
-                      <OfficeCanvas
-                        isCommunicationPanelOpen={false}
-                        onToggleCommunicationPanel={() => setIsCommunicationPanelOpen(true)}
-                      />
-                      <FloorNav />
-                    </>
-                  )}
-                </div>
-              </>
-            ) : activeView === 'dashboard' ? (
+            {activeView === 'dashboard' ? (
               <Suspense fallback={<ViewLoadingState />}>
                 <DashboardView />
               </Suspense>
@@ -411,6 +417,10 @@ export default function App() {
             ) : activeView === 'files' ? (
               <Suspense fallback={<ViewLoadingState />}>
                 <FilesView />
+              </Suspense>
+            ) : activeView === 'errors' ? (
+              <Suspense fallback={<ViewLoadingState />}>
+                <ErrorLogView />
               </Suspense>
             ) : (
               <Suspense fallback={<ViewLoadingState />}>
@@ -441,7 +451,6 @@ function ViewLoadingState() {
 
 const MOBILE_NAV = [
   { id: 'dashboard', label: '현황',     icon: '📊' },
-  { id: 'office',    label: '오피스',   icon: '🏢' },
   { id: 'tasks',     label: '작업',     icon: '📋' },
   { id: 'chat',      label: '채팅',     icon: '💬' },
   { id: 'agents',    label: '에이전트', icon: '🤖' },
@@ -456,26 +465,32 @@ function MobileBottomNav({
   setActiveView: (view: WorkspaceView) => void
 }) {
   return (
-    <nav className="md:hidden shrink-0 border-t border-office-panel bg-office-sidebar">
-      <div className="flex items-stretch">
-        {MOBILE_NAV.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => setActiveView(item.id)}
-            className={`flex flex-1 flex-col items-center gap-0.5 py-2 transition-colors ${
-              activeView === item.id
-                ? 'text-office-active'
-                : 'text-office-text/50 hover:text-office-text'
-            }`}
-          >
-            <span className="text-base leading-none">{item.icon}</span>
-            <span className="text-[9px]">{item.label}</span>
-            {activeView === item.id && (
-              <span className="h-0.5 w-4 rounded-full bg-office-active" />
-            )}
-          </button>
-        ))}
+    <nav className="md:hidden shrink-0 border-t border-office-panel bg-office-sidebar" aria-label="하단 탐색">
+      <div className="flex items-stretch" role="tablist">
+        {MOBILE_NAV.map((item) => {
+          const isActive = activeView === item.id
+          return (
+            <button
+              key={item.id}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              aria-label={`${item.label} 화면으로 이동`}
+              onClick={() => setActiveView(item.id)}
+              className={`flex flex-1 flex-col items-center gap-0.5 py-2 transition-colors ${
+                isActive
+                  ? 'text-office-active'
+                  : 'text-office-text/50 hover:text-office-text'
+              }`}
+            >
+              <span className="text-base leading-none" aria-hidden="true">{item.icon}</span>
+              <span className="text-[9px]">{item.label}</span>
+              {isActive && (
+                <span className="h-0.5 w-4 rounded-full bg-office-active" aria-hidden="true" />
+              )}
+            </button>
+          )
+        })}
       </div>
     </nav>
   )

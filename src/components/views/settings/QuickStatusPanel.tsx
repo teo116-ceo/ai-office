@@ -8,6 +8,9 @@ interface QuickStatusPanelProps {
   schedulerEnabled: boolean
   triggersEnabled: boolean
   memoryEnabled: boolean
+  isLoadingProviders?: boolean
+  providerFetchError?: boolean
+  onRetryProviders?: () => void
 }
 
 function StatusTile({
@@ -40,17 +43,40 @@ export default function QuickStatusPanel({
   schedulerEnabled,
   triggersEnabled,
   memoryEnabled,
+  isLoadingProviders = false,
+  providerFetchError = false,
+  onRetryProviders,
 }: QuickStatusPanelProps) {
   const automationCount = [schedulerEnabled, triggersEnabled, memoryEnabled].filter(Boolean).length
 
   return (
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-      <StatusTile
-        label="AI 서비스"
-        value={`${connectedProviderCount}/${totalProviders}`}
-        hint={connectedProviderCount === totalProviders ? '모든 AI 서비스 키가 준비됐습니다.' : '일부 AI 서비스만 연결된 상태입니다.'}
-        accent={connectedProviderCount > 0}
-      />
+      {isLoadingProviders ? (
+        <div className="rounded-2xl border border-office-panel/70 bg-office-panel/40 p-4 animate-pulse">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-office-text/45">AI 서비스</p>
+          <div className="mt-3 h-6 w-12 rounded bg-office-panel/70" />
+          <p className="mt-1 text-xs text-office-text/30">서버에서 확인 중...</p>
+        </div>
+      ) : providerFetchError ? (
+        <div className="rounded-2xl border border-red-500/30 bg-red-500/5 p-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-office-text/45">AI 서비스</p>
+          <p className="mt-3 text-sm font-semibold text-red-400">확인 실패</p>
+          <button
+            type="button"
+            onClick={onRetryProviders}
+            className="mt-2 text-xs text-office-active underline hover:no-underline"
+          >
+            다시 시도
+          </button>
+        </div>
+      ) : (
+        <StatusTile
+          label="AI 서비스"
+          value={`${connectedProviderCount}/${totalProviders}`}
+          hint={connectedProviderCount === totalProviders ? '모든 AI 서비스 키가 준비됐습니다.' : '일부 AI 서비스만 연결된 상태입니다.'}
+          accent={connectedProviderCount > 0}
+        />
+      )}
       <StatusTile
         label="알림 연동"
         value={webhookEnabled ? '활성' : webhookReady ? '준비됨' : '미설정'}

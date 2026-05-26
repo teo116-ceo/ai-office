@@ -15,7 +15,7 @@ test('explicit department mention wins over inferred keywords', () => {
 })
 
 test('keyword routing falls back to core Ji-eum departments when nothing matches', () => {
-  assert.deepEqual(resolveByKeyword('이번 요청을 검토해주세요'), ['planning', 'security', 'compliance', 'sales'])
+  assert.deepEqual(resolveByKeyword('이번 요청을 검토해주세요'), ['ceo', 'planning', 'security', 'sales'])
 })
 
 test('meeting summon ignores question-like prompts', () => {
@@ -35,12 +35,12 @@ test('large meeting includes all departments', () => {
 
 test('small meeting uses current floor departments when message is generic', () => {
   const plan = resolveMeetingPlan('소회의실로 모여서 회의해', '7f')
-  assert.deepEqual(plan?.departmentIds, ['qa', 'devops'])
+  assert.deepEqual(plan?.departmentIds, ['development'])
 })
 
 test('coordinator message summarizes attachment count', () => {
   const message = buildCoordinatorMessage(['security', 'development'], 2, null)
-  assert.match(message, /배정된 부서: R&D 관리, 자동화개발/)
+  assert.match(message, /배정된 부서: 연구개발, 자동화개발/)
   assert.match(message, /첨부 파일: 2개/)
 })
 

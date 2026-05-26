@@ -11,6 +11,19 @@ const BLOCKED_PREFIXES = [
   '172.30.', '172.31.', '192.168.', '169.254.',
 ]
 
+// IPv6 사설/링크로컬 범위 차단:
+//   fc00::/7  — Unique Local (fc__, fd__)
+//   fe80::/10 — Link-Local (fe8_, fe9_, fea_, feb_)
+//   ::ffff:0:0/96 — IPv4-mapped (IPv4 사설 범위 우회 방지)
+const BLOCKED_IPV6_PREFIXES = ['fc', 'fd', 'fe8', 'fe9', 'fea', 'feb', '::ffff:']
+
+function isBlockedIPv6(hostname: string): boolean {
+  if (!hostname.startsWith('[') || !hostname.endsWith(']')) return false
+  const addr = hostname.slice(1, -1).toLowerCase()
+  // ::1은 LOCAL_HOSTS에서 이미 처리
+  return BLOCKED_IPV6_PREFIXES.some((prefix) => addr.startsWith(prefix))
+}
+
 export interface WebhookValidationSuccess {
   ok: true
   url: URL
@@ -60,6 +73,10 @@ export function validateWebhookUrl(rawUrl: string): WebhookValidationResult {
 
   if (isLocalHost(hostname)) {
     return { ok: true, url: parsed, kind: 'local' }
+  }
+
+  if (isBlockedIPv6(hostname)) {
+    return { ok: false, message: '사설 네트워크 주소로는 웹훅을 보낼 수 없습니다.' }
   }
 
   if (parsed.protocol !== 'https:') {

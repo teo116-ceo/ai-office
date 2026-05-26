@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { resolveDepartmentFloor, resolveAgentFloor } from '@/services/directives'
 import { useAgentStore } from '@/store/agentStore'
 import { useShallow } from 'zustand/react/shallow'
-import { DEPARTMENTS, FLOORS, FloorId, Message, ExecutionLogKind } from '@/types'
+import { DEPARTMENTS, FLOORS, FloorId, Message, ExecutionLogKind, DepartmentId, WorkspaceView } from '@/types'
 import { formatTime, formatTimeWithSeconds } from '@/utils/dateFormat'
 
 const LOG_STYLE: Record<ExecutionLogKind, { icon: string; color: string }> = {
@@ -16,7 +16,7 @@ const AGENT_STATUS_LABEL: Record<string, { label: string; dot: string }> = {
   working:  { label: '작업 중',  dot: 'bg-blue-400 animate-pulse' },
   thinking: { label: '생각 중',  dot: 'bg-purple-400 animate-pulse' },
   debating: { label: '토론 중',  dot: 'bg-yellow-400 animate-pulse' },
-  moving:   { label: '이동 중',  dot: 'bg-green-400' },
+  moving:   { label: '회의 대기', dot: 'bg-green-400' },
 }
 
 const FLOOR_ORDER: FloorId[] = ['11f', '10f', '9f', '8f', '7f', '6f', '5f', '4f', '3f', '2f', '1f']
@@ -70,27 +70,41 @@ export default function DashboardView() {
     .sort((left, right) => right.timestamp.getTime() - left.timestamp.getTime())
     .slice(0, 6)
 
+  const kpi = useMemo(() => {
+    const terminal = tasks.filter((t) => t.status === 'completed' || t.status === 'failed')
+    const completionRate = terminal.length > 0 ? Math.round((completedTasks / terminal.length) * 100) : null
+
+    const reviewed = tasks.filter((t) => (t.reviews?.length ?? 0) > 0).length
+    const reviewRate = tasks.length > 0 ? Math.round((reviewed / tasks.length) * 100) : null
+
+    const deptCount: Partial<Record<DepartmentId, { completed: number; total: number }>> = {}
+    for (const task of tasks) {
+      for (const deptId of task.assignedTo) {
+        if (!deptCount[deptId]) deptCount[deptId] = { completed: 0, total: 0 }
+        deptCount[deptId]!.total += 1
+        if (task.status === 'completed') deptCount[deptId]!.completed += 1
+      }
+    }
+    const deptThroughput = (Object.entries(deptCount) as [DepartmentId, { completed: number; total: number }][])
+      .sort((a, b) => b[1].completed - a[1].completed)
+      .slice(0, 6)
+
+    return { completionRate, reviewRate, reviewed, deptThroughput }
+  }, [tasks, completedTasks])
+
   return (
     <section className="flex-1 overflow-y-auto bg-office-bg p-6">
       <div className="mx-auto max-w-7xl space-y-6">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-sm font-semibold text-office-active">대시보드</p>
-            <h2 className="mt-1 text-2xl font-semibold text-white">AI 오피스 현황</h2>
+            <h2 className="mt-1 text-2xl font-semibold text-white">AI Office 운영 현황</h2>
             <p className="mt-2 text-sm text-office-text/60">
-              현재 선택된 층은 {FLOORS[currentFloor].label} {FLOORS[currentFloor].name}입니다.
+              현재 선택된 조직 구역은 {FLOORS[currentFloor].label} {FLOORS[currentFloor].name}입니다.
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => setActiveView('office')}
-              title="현재 층의 AI 오피스 화면으로 이동합니다."
-              className="rounded border border-office-panel/70 bg-office-panel px-3 py-2 text-sm text-office-text transition-colors hover:border-office-active hover:text-white"
-            >
-              오피스로 이동
-            </button>
+          <div className="flex flex-wrap gap-2 md:hidden">
             <button
               type="button"
               onClick={() => setActiveView('tasks')}
@@ -119,7 +133,81 @@ export default function DashboardView() {
             badge={awaitingApprovalTasks > 0 ? `승인 대기 ${awaitingApprovalTasks}건` : undefined}
           />
           <StatCard title="누적 메시지" value={`${messages.length}건`} description="팀 채팅과 회의 메시지 기록" />
-          <StatCard title="현재 층" value={FLOORS[currentFloor].label} description={FLOORS[currentFloor].name} />
+          <StatCard title="현재 구역" value={FLOORS[currentFloor].label} description={FLOORS[currentFloor].name} />
+        </div>
+
+        {/* ── 사업 KPI ── */}
+        <div className="rounded-2xl border border-office-panel bg-office-sidebar p-5">
+          <div>
+            <p className="text-sm font-semibold text-white">사업 지표</p>
+            <p className="mt-0.5 text-xs text-office-text/50">누적 업무 기준 완료율 · 교차검토율 · 부서 처리량</p>
+          </div>
+
+          <div className="mt-4 grid gap-4 sm:grid-cols-3">
+            {/* 완료율 */}
+            <div className="rounded-xl border border-office-panel/70 bg-office-panel/40 px-4 py-4">
+              <p className="text-xs text-office-text/60">업무 완료율</p>
+              <p className="mt-2 text-2xl font-semibold text-white">
+                {kpi.completionRate !== null ? `${kpi.completionRate}%` : '—'}
+              </p>
+              <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-office-panel">
+                <div
+                  className="h-full rounded-full bg-green-400 transition-all"
+                  style={{ width: `${kpi.completionRate ?? 0}%` }}
+                />
+              </div>
+              <p className="mt-2 text-[11px] text-office-text/40">
+                완료 {completedTasks}건 · 실패 {failedTasks}건
+              </p>
+            </div>
+
+            {/* 교차검토율 */}
+            <div className="rounded-xl border border-office-panel/70 bg-office-panel/40 px-4 py-4">
+              <p className="text-xs text-office-text/60">교차 검토율</p>
+              <p className="mt-2 text-2xl font-semibold text-white">
+                {kpi.reviewRate !== null ? `${kpi.reviewRate}%` : '—'}
+              </p>
+              <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-office-panel">
+                <div
+                  className="h-full rounded-full bg-purple-400 transition-all"
+                  style={{ width: `${kpi.reviewRate ?? 0}%` }}
+                />
+              </div>
+              <p className="mt-2 text-[11px] text-office-text/40">
+                검토 완료 {kpi.reviewed}건 / 전체 {tasks.length}건
+              </p>
+            </div>
+
+            {/* 부서별 처리량 */}
+            <div className="rounded-xl border border-office-panel/70 bg-office-panel/40 px-4 py-4">
+              <p className="text-xs text-office-text/60">부서별 처리량 (Top 6)</p>
+              {kpi.deptThroughput.length === 0 ? (
+                <p className="mt-3 text-sm text-office-text/30">업무 데이터 없음</p>
+              ) : (
+                <ul className="mt-3 space-y-2">
+                  {kpi.deptThroughput.map(([deptId, { completed, total }]) => {
+                    const pct = total > 0 ? Math.round((completed / total) * 100) : 0
+                    return (
+                      <li key={deptId}>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="truncate text-[11px] text-office-text/70">
+                            {DEPARTMENTS[deptId]?.name ?? deptId}
+                          </span>
+                          <span className="shrink-0 text-[11px] font-semibold text-white">{completed}/{total}</span>
+                        </div>
+                        <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-office-panel">
+                          <div
+                            className="h-full rounded-full bg-office-active transition-all"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </li>
+                    )
+                  })}
+                </ul>
+              )}
+            </div>
+          </div>
         </div>
 
         <div className="rounded-2xl border border-office-panel bg-office-sidebar p-5">
@@ -198,9 +286,8 @@ export default function DashboardView() {
                         type="button"
                         onClick={() => {
                           if (floorId) setCurrentFloor(floorId)
-                          setActiveView('office')
                         }}
-                        title={`${floorLabel} ${deptName}으로 이동합니다.`}
+                          title={`${floorLabel} ${deptName} 구역으로 이동합니다.`}
                         className="rounded-xl border border-office-panel/70 bg-office-panel/50 px-4 py-3 text-left transition-colors hover:border-office-active hover:bg-office-panel/80"
                       >
                         <div className="flex items-center justify-between gap-2">
@@ -230,8 +317,8 @@ export default function DashboardView() {
         <div className="grid gap-6 xl:grid-cols-[1.3fr_0.9fr]">
           <div className="rounded-2xl border border-office-panel bg-office-sidebar p-5">
             <div>
-              <p className="text-sm font-semibold text-white">층별 현황</p>
-              <p className="mt-0.5 text-xs text-office-text/50">층을 누르면 해당 층으로 이동 · 회의실·카페 포함</p>
+              <p className="text-sm font-semibold text-white">조직 구역 현황</p>
+              <p className="mt-0.5 text-xs text-office-text/50">구역을 누르면 해당 운영 화면으로 이동합니다.</p>
             </div>
 
             <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -241,9 +328,8 @@ export default function DashboardView() {
                   type="button"
                   onClick={() => {
                     setCurrentFloor(floorId)
-                    setActiveView('office')
                   }}
-                  title={`${floor.label} ${floor.name}층의 오피스 화면으로 이동합니다.`}
+                  title={`${floor.label} ${floor.name} 구역을 선택합니다.`}
                   className={`rounded-xl border px-4 py-4 text-left transition-colors ${
                     currentFloor === floorId
                       ? 'border-office-active bg-office-active/20'
@@ -289,7 +375,7 @@ export default function DashboardView() {
                   key={message.id}
                   type="button"
                   onClick={() => openMessageContext(message, setCurrentFloor, setActiveView)}
-                  title="이 대화가 발생한 채널이나 층으로 이동합니다."
+                  title="이 대화가 발생한 채널이나 조직 구역으로 이동합니다."
                   className="w-full rounded-xl border border-office-panel/70 bg-office-panel/50 px-4 py-3 text-left transition-colors hover:border-office-active hover:bg-office-panel/80"
                 >
                   <div className="flex items-center justify-between gap-3">
@@ -308,11 +394,11 @@ export default function DashboardView() {
                   <p className="mb-4 mt-1 text-xs text-office-text/30">에이전트에게 업무를 지시하면 대화가 시작됩니다.</p>
                   <button
                     type="button"
-                    onClick={() => setActiveView('office')}
-                    title="AI 오피스 화면으로 이동해 새 업무를 시작합니다."
+                    onClick={() => setActiveView('tasks')}
+                    title="작업 관리 화면으로 이동해 새 업무를 시작합니다."
                     className="rounded border border-office-active/40 bg-office-active/10 px-3 py-1.5 text-xs text-office-active transition-colors hover:bg-office-active/20"
                   >
-                    AI 오피스로 이동
+                    작업 관리로 이동
                   </button>
                 </div>
               )}
@@ -360,14 +446,11 @@ function resolveMessageFloors(message: Message): FloorId[] {
 function openMessageContext(
   message: Message,
   setCurrentFloor: (floor: FloorId) => void,
-  setActiveView: (view: 'office' | 'chat') => void,
+  setActiveView: (view: WorkspaceView) => void,
 ) {
   const [targetFloor] = resolveMessageFloors(message)
   if (targetFloor) {
     setCurrentFloor(targetFloor)
-    setActiveView('office')
-    return
   }
-
   setActiveView('chat')
 }

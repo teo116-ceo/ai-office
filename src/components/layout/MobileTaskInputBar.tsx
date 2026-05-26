@@ -1,5 +1,5 @@
-import { type ChangeEvent, useRef, useState } from 'react'
-import { runTask } from '@/services/agentOrchestrator'
+import { type ChangeEvent, useEffect, useRef, useState } from 'react'
+import { useTaskActions } from '@/hooks/useTaskActions'
 import { formatFileSize, prepareUploadedFiles } from '@/services/fileContext'
 import type { UploadedFile } from '@/types'
 
@@ -8,10 +8,19 @@ const ATTACHMENT_ANALYSIS_PROMPT = '첨부한 파일의 핵심 내용과 구조�
 export default function MobileTaskInputBar() {
   const [input, setInput] = useState('')
   const [attachments, setAttachments] = useState<UploadedFile[]>([])
-  const [isLoading, setIsLoading] = useState(false)
+  const { submitTask, isRunning: isLoading } = useTaskActions()
   const [isPreparingFiles, setIsPreparingFiles] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  useEffect(() => {
+    const textarea = textareaRef.current
+    if (!textarea) return
+
+    textarea.style.height = 'auto'
+    textarea.style.height = `${textarea.scrollHeight}px`
+  }, [input])
 
   const handleSelectFiles = async (event: ChangeEvent<HTMLInputElement>) => {
     const fileList = event.target.files
@@ -41,13 +50,7 @@ export default function MobileTaskInputBar() {
     setInput('')
     setAttachments([])
     setUploadError(null)
-    setIsLoading(true)
-
-    try {
-      await runTask(taskPrompt, submittedAttachments)
-    } finally {
-      setIsLoading(false)
-    }
+    await submitTask(taskPrompt, submittedAttachments)
   }
 
   const canSubmit = !isLoading && !isPreparingFiles && (input.trim().length > 0 || attachments.length > 0)
@@ -99,6 +102,7 @@ export default function MobileTaskInputBar() {
         </button>
 
         <textarea
+          ref={textareaRef}
           value={input}
           onChange={(event) => setInput(event.target.value)}
           onKeyDown={(event) => {
@@ -109,7 +113,7 @@ export default function MobileTaskInputBar() {
           }}
           placeholder=""
           rows={1}
-          className="flex-1 resize-none rounded border border-office-panel/50 bg-office-panel px-3 py-2 text-sm text-office-text placeholder-office-text/40 focus:outline-none focus:border-office-active"
+          className="max-h-32 min-h-10 flex-1 resize-none overflow-y-auto rounded border border-office-panel/50 bg-office-panel px-3 py-2 text-sm text-office-text placeholder-office-text/40 focus:border-office-active focus:outline-none"
         />
 
         <button

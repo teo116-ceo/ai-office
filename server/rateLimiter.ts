@@ -1,19 +1,18 @@
-// Simple in-memory rate limiter — no external dependencies needed
+// Sliding window rate limiter — 타임스탬프 배열로 구현
+// Fixed window 방식의 경계 burst 문제 해결:
+//   Fixed: 59초에 60회 + 61초에 60회 = 2초에 120회 가능
+//   Sliding: 임의의 windowMs 구간에서 항상 max회 이하 보장
 
-interface Bucket {
-  count: number
-  windowStart: number
-}
+const timestamps = new Map<string, number[]>()
 
-const buckets = new Map<string, Bucket>()
-
-// 만료된 버킷 주기 정리 (메모리 누수 방지)
+// 오래된 엔트리 주기 정리 (메모리 누수 방지)
+// unref()로 이벤트 루프를 붙잡지 않아 테스트/종료 시 자연히 해제
 setInterval(() => {
-  const now = Date.now()
-  for (const [key, bucket] of buckets) {
-    if (now - bucket.windowStart > 60 * 60 * 1000) buckets.delete(key)
+  const cutoff = Date.now() - 60 * 60 * 1000
+  for (const [key, ts] of timestamps) {
+    if (ts.length === 0 || ts[ts.length - 1] < cutoff) timestamps.delete(key)
   }
-}, 10 * 60 * 1000)
+}, 10 * 60 * 1000).unref()
 
 /**
  * Returns true if the key is within the allowed rate.
@@ -23,19 +22,22 @@ setInterval(() => {
  */
 export function checkRateLimit(key: string, max: number, windowMs: number): boolean {
   const now = Date.now()
-  const bucket = buckets.get(key)
+  const cutoff = now - windowMs
 
-  if (!bucket || now - bucket.windowStart >= windowMs) {
-    buckets.set(key, { count: 1, windowStart: now })
-    return true
+  const ts = timestamps.get(key) ?? []
+  // 윈도우 밖의 오래된 타임스탬프 제거
+  const recent = ts.filter((t) => t > cutoff)
+
+  if (recent.length >= max) {
+    timestamps.set(key, recent)
+    return false
   }
 
-  if (bucket.count >= max) return false
-
-  bucket.count++
+  recent.push(now)
+  timestamps.set(key, recent)
   return true
 }
 
 export function resetRateLimit(key: string): void {
-  buckets.delete(key)
+  timestamps.delete(key)
 }

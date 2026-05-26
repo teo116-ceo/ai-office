@@ -17,7 +17,7 @@ function deriveButtonTitle(button: HTMLButtonElement) {
     return null
   }
 
-  if (/^[><×✕✖☀☾🔔📊🏢📋💬🤖📁⚙️📎🔄]+$/.test(text)) {
+  if (/^(?:[><×✕✖☀☾🔔📊🏢📋💬🤖📁📎🔄]|⚙️)+$/u.test(text)) {
     return null
   }
 

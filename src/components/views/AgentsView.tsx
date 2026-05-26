@@ -69,7 +69,7 @@ const STATUS_LABEL: Record<Agent['status'], string> = {
   working: '작업 중',
   thinking: '생각 중',
   debating: '토론 중',
-  moving: '이동 중',
+  moving: '회의 대기',
 }
 
 function getRecommendedModel(agent: Agent): ModelRecommendation {
@@ -96,6 +96,7 @@ export default function AgentsView() {
 
   useEffect(() => {
     if (window.innerWidth >= 768 && selectedId === null) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedId(agents[0]?.id ?? null)
     }
   }, [agents, selectedId])
@@ -109,6 +110,7 @@ export default function AgentsView() {
 
   useEffect(() => {
     if (!selectedAgent) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setEditName(selectedAgent.name)
     setEditRole(selectedAgent.role)
     setEditModel(selectedAgent.model)
@@ -174,10 +176,10 @@ export default function AgentsView() {
           </div>
           <button
             type="button"
-            onClick={() => setActiveView('office')}
+            onClick={() => setActiveView('dashboard')}
             className="rounded border border-office-panel/70 bg-office-panel px-2 py-1 text-xs text-office-text transition-colors hover:border-office-active hover:text-white"
           >
-            오피스로
+            대시보드로
           </button>
         </div>
 

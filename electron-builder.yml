@@ -20,9 +20,12 @@ nsis:
   createDesktopShortcut: true
   createStartMenuShortcut: true
   shortcutName: AI 오피스
+  installerHeader: build/installer-header.bmp
   installerSidebar: build/installer-sidebar.bmp
   uninstallerSidebar: build/installer-sidebar.bmp
-  license: build/license.html
+  license: build/license.rtf
+  deleteAppDataOnUninstall: true
+  include: build/installer.nsh
 
 win:
   icon: public/icon.ico

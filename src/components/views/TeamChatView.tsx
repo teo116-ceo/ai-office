@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { resolveDepartmentFloor } from '@/services/directives'
-import { runChannelMessage, runTask } from '@/services/agentOrchestrator'
+import { useTaskActions } from '@/hooks/useTaskActions'
 import { prepareUploadedFiles } from '@/services/fileContext'
 import { useAgentStore } from '@/store/agentStore'
 import { useShallow } from 'zustand/react/shallow'
@@ -38,16 +38,35 @@ const TYPE_COLOR: Record<Message['type'], string> = {
 function isMessageInDeptChannel(message: Message, deptId: DepartmentId): boolean {
   const deptFloor = resolveDepartmentFloor(deptId)
 
-  if (message.channelFloorId) return message.channelFloorId === deptFloor
+  // '1f'는 회의층으로 부서 채널이 없음 — departmentIds로 폴백
+  if (message.channelFloorId && message.channelFloorId !== '1f') {
+    return message.channelFloorId === deptFloor
+  }
   if (message.departmentIds && message.departmentIds.length > 0) {
     return message.departmentIds.includes(deptId)
   }
-  return false
+  // channelFloorId도 departmentIds도 없는 고아 메시지 → CEO 채널에 표시
+  return deptId === 'ceo'
+}
+
+function isRawAgentMessage(message: Message): boolean {
+  return message.type === 'result' || message.type === 'debate'
+}
+
+function isBriefingSummary(message: Message): boolean {
+  return message.type === 'system' && message.senderName.includes('비서 보고')
 }
 
 export default function TeamChatView() {
   const [, streamingTick] = useReducer((x: number) => x + 1, 0)
   useEffect(() => subscribeToStreaming(streamingTick), [])
+  const [expandedMessages, setExpandedMessages] = useState<Set<string>>(new Set())
+  const toggleExpanded = (id: string) =>
+    setExpandedMessages((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
 
   const { agents, messages, setActiveView } = useAgentStore(
     useShallow((s) => ({
@@ -60,7 +79,7 @@ export default function TeamChatView() {
   const [mobileView, setMobileView] = useState<'channels' | 'chat'>('channels')
   const [input, setInput] = useState('')
   const [attachments, setAttachments] = useState<UploadedFile[]>([])
-  const [isLoading, setIsLoading] = useState(false)
+  const { submitTask, submitChannelMessage, isRunning: isLoading } = useTaskActions()
   const [isPreparingFiles, setIsPreparingFiles] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -97,6 +116,14 @@ export default function TeamChatView() {
     scrollToBottom('auto')
   }, [activeDept])
 
+  useEffect(() => {
+    const textarea = textareaRef.current
+    if (!textarea) return
+
+    textarea.style.height = 'auto'
+    textarea.style.height = `${textarea.scrollHeight}px`
+  }, [input])
+
   // 부서별 미확인 메시지 수
   const unreadByDept = useMemo(() => {
     const counts: Partial<Record<DepartmentId, number>> = {}
@@ -131,16 +158,11 @@ export default function TeamChatView() {
     const submitted = attachments
     setInput('')
     setAttachments([])
-    setIsLoading(true)
-    try {
-      // CEO 채널(12F)은 전사 공지 — CEO 라우팅을 통해 전 부서로 전달
-      if (isCeoChannel) {
-        await runTask(text, submitted)
-      } else {
-        await runChannelMessage(activeDept, text, submitted)
-      }
-    } finally {
-      setIsLoading(false)
+    // CEO 채널(12F)은 전사 공지 — CEO 라우팅을 통해 전 부서로 전달
+    if (isCeoChannel) {
+      await submitTask(text, submitted)
+    } else {
+      await submitChannelMessage(activeDept, text, submitted)
     }
   }
 
@@ -217,11 +239,11 @@ export default function TeamChatView() {
           </div>
           <button
             type="button"
-            onClick={() => setActiveView('office')}
-            title="현재 채널을 닫고 AI 오피스로 돌아갑니다."
+            onClick={() => setActiveView('dashboard')}
+            title="대시보드로 돌아갑니다."
             className="rounded border border-office-panel/70 bg-office-panel px-3 py-1 text-xs text-office-text transition-colors hover:border-office-active hover:text-white"
           >
-            오피스
+            운영실
           </button>
         </div>
 
@@ -237,6 +259,65 @@ export default function TeamChatView() {
             <div className="space-y-3">
               {channelMessages.map((message) => {
                 const isUser = message.sender === 'user'
+                const isRaw = isRawAgentMessage(message)
+                const isBriefing = isBriefingSummary(message)
+                const isExpanded = expandedMessages.has(message.id)
+                const content = message.streaming
+                  ? (getStreamingContent(message.id) ?? message.content)
+                  : message.content
+
+                // 비서 보고 강조 카드
+                if (isBriefing) {
+                  return (
+                    <div key={message.id} className="rounded-xl border border-office-active/40 bg-office-active/10 px-4 py-3">
+                      <div className="mb-2 flex items-center gap-2">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-office-active/60">비서 보고</span>
+                        <span className="text-xs font-semibold text-office-active">{message.senderName.replace(' (비서 보고)', '')}</span>
+                        <span className="ml-auto text-[10px] text-office-text/30">
+                          {message.timestamp.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      </div>
+                      <MessageContent content={content} streaming={message.streaming} />
+                    </div>
+                  )
+                }
+
+                // 에이전트 원문 — 기본 접힘
+                if (isRaw) {
+                  return (
+                    <div key={message.id} className="rounded-lg border border-office-panel/50 bg-office-panel/20">
+                      <button
+                        type="button"
+                        onClick={() => toggleExpanded(message.id)}
+                        className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left hover:bg-white/5 transition-colors rounded-lg"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className={`rounded px-1.5 py-0.5 text-[10px] font-medium shrink-0 ${TYPE_COLOR[message.type]}`}>
+                            {TYPE_LABEL[message.type]}
+                          </span>
+                          <span className="text-xs text-office-text/60 truncate">{message.senderName}</span>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-2">
+                          {!isExpanded && (
+                            <span className="text-[10px] text-office-text/30 truncate max-w-[120px]">
+                              {content.slice(0, 40).replace(/\n/g, ' ')}…
+                            </span>
+                          )}
+                          <span className="text-[10px] text-office-text/40">{isExpanded ? '▲' : '▼'}</span>
+                        </div>
+                      </button>
+                      {isExpanded && (
+                        <div className="border-t border-office-panel/40 px-4 pb-3 pt-2">
+                          <MessageContent content={content} streaming={message.streaming} />
+                          <p className="mt-2 text-[10px] text-office-text/30">
+                            {message.timestamp.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )
+                }
+
                 return (
                   <div key={message.id} className={`flex gap-3 ${isUser ? 'flex-row-reverse' : ''}`}>
                     {/* 아바타 */}
@@ -268,7 +349,7 @@ export default function TeamChatView() {
                         }`}
                       >
                         <MessageContent
-                          content={message.streaming ? (getStreamingContent(message.id) ?? message.content) : message.content}
+                          content={content}
                           streaming={message.streaming}
                         />
                       </div>
@@ -357,8 +438,7 @@ export default function TeamChatView() {
               placeholder={isCeoChannel ? '전사 공지 입력... CEO가 전 부서로 전달합니다 (Enter 전송)' : `${dept.name}팀에게 메시지 보내기... (Enter 전송, Shift+Enter 줄바꿈)`}
               rows={1}
               disabled={isLoading}
-              className="flex-1 resize-none rounded-lg border border-office-panel/60 bg-office-panel/40 px-3 py-2 text-sm text-white placeholder-office-text/30 outline-none focus:border-office-active/60 disabled:opacity-50"
-              style={{ maxHeight: '120px', overflowY: 'auto' }}
+              className="max-h-32 min-h-10 flex-1 resize-none overflow-y-auto rounded-lg border border-office-panel/60 bg-office-panel/40 px-3 py-2 text-sm text-white placeholder-office-text/30 outline-none focus:border-office-active/60 disabled:opacity-50"
             />
             <button
               type="button"
