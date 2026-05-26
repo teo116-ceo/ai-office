@@ -308,7 +308,7 @@ export default function App() {
 
   if (sessionState === 'loading') {
     return (
-      <div className="flex h-dvh w-screen items-center justify-center bg-[#0d0d1a]">
+      <div className="bg-office-bg flex h-dvh w-screen items-center justify-center">
         <div className="text-sm text-white/40">연결 중...</div>
       </div>
     )
@@ -316,10 +316,10 @@ export default function App() {
 
   if (sessionState === 'login') {
     return (
-      <div className="flex h-dvh w-screen items-center justify-center bg-[#0d0d1a]">
+      <div className="bg-office-bg flex h-dvh w-screen items-center justify-center">
         <form
           onSubmit={(event) => { void handleLogin(event) }}
-          className="flex w-80 flex-col gap-4 rounded-2xl border border-white/10 bg-[#141428] p-8"
+          className="bg-office-sidebar border-office-panel flex w-80 flex-col gap-4 rounded-2xl border p-8 shadow-lg"
         >
           <div className="text-center">
             <div className="text-2xl font-bold text-white">AI 오피스</div>
@@ -341,13 +341,13 @@ export default function App() {
             type="email"
             autoFocus
             placeholder="이메일"
-            className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-white/30 outline-none focus:border-white/30"
+            className="border-office-panel bg-office-panel/50 placeholder-office-text/40 focus:border-office-active rounded-lg border px-3 py-2 text-sm text-white outline-none"
           />
           <input
             ref={passwordRef}
             type="password"
             placeholder="비밀번호"
-            className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-white/30 outline-none focus:border-white/30"
+            className="border-office-panel bg-office-panel/50 placeholder-office-text/40 focus:border-office-active rounded-lg border px-3 py-2 text-sm text-white outline-none"
           />
 
           <label className="flex cursor-pointer items-center gap-2 select-none">
@@ -355,7 +355,7 @@ export default function App() {
               type="checkbox"
               checked={rememberEmail}
               onChange={(e) => setRememberEmail(e.target.checked)}
-              className="h-4 w-4 rounded accent-[#ff2d55]"
+              className="accent-office-active h-4 w-4 rounded"
             />
             <span className="text-xs text-white/50">이메일 저장</span>
           </label>
@@ -369,7 +369,7 @@ export default function App() {
           <button
             type="submit"
             disabled={loginLoading}
-            className="rounded-lg bg-[#ff2d55] py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+            className="bg-office-active rounded-lg py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
           >
             {loginLoading ? '확인 중...' : '입장'}
           </button>
@@ -380,7 +380,7 @@ export default function App() {
 
   if (apiKeyState === 'checking') {
     return (
-      <div className="flex h-dvh w-screen items-center justify-center bg-[#0d0d1a]">
+      <div className="bg-office-bg flex h-dvh w-screen items-center justify-center">
         <div className="text-sm text-white/40">API 키 상태 확인 중...</div>
       </div>
     )

@@ -18,6 +18,7 @@ const GITHUB_TOKEN  = process.env.GITHUB_TOKEN  ?? envConfig.GITHUB_TOKEN  ?? ''
 const GITHUB_OWNER  = process.env.GITHUB_OWNER  ?? envConfig.GITHUB_OWNER  ?? ''
 const GITHUB_REPO   = process.env.GITHUB_REPO   ?? envConfig.GITHUB_REPO   ?? 'ai-office'
 const APP_PASSWORD  = process.env.APP_PASSWORD  ?? envConfig.APP_PASSWORD  ?? ''
+const APP_EMAIL     = process.env.APP_EMAIL     ?? envConfig.APP_EMAIL     ?? ''
 
 if (!GITHUB_TOKEN || !GITHUB_OWNER) {
   console.error('\n[오류] .env.electron 파일에 GITHUB_TOKEN과 GITHUB_OWNER를 설정하세요.')
@@ -45,13 +46,14 @@ const defineFlags = [
   `--define:process.env.GITHUB_OWNER='"${GITHUB_OWNER}"'`,
   `--define:process.env.GITHUB_REPO='"${GITHUB_REPO}"'`,
   `--define:process.env.APP_PASSWORD='"${APP_PASSWORD}"'`,
+  `--define:process.env.APP_EMAIL='"${APP_EMAIL}"'`,
 ].join(' ')
 run(`npx esbuild electron/main.ts --bundle --platform=node --format=cjs --outfile=dist-electron/main.cjs --external:electron --external:fsevents ${defineFlags}`)
 run('npx esbuild electron/preload.ts --bundle --platform=node --format=cjs --outfile=dist-electron/preload.cjs --external:electron')
 
-// 5. electron-builder 패키징
-console.log('\n[4/4] electron-builder 패키징...')
+// 5. electron-builder 패키징 + GitHub Release 업로드
+console.log('\n[4/4] electron-builder 패키징 & GitHub Release 업로드...')
 process.env.GH_TOKEN = GITHUB_TOKEN
-run('npx electron-builder')
+run('npx electron-builder --publish always')
 
-console.log('\n빌드 완료! release/ 폴더를 확인하세요.')
+console.log('\n빌드 완료! GitHub Releases에 자동 업로드됐습니다.')

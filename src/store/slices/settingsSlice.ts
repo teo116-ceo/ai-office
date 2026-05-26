@@ -74,7 +74,7 @@ export const createSettingsSlice: StateCreator<AgentStore, [], [], SettingsSlice
   },
   themeMode: (() => {
     const saved = safeLocalStorage.getItem('ai-office-theme')
-    return isThemeMode(saved) ? saved : 'dark'
+    return isThemeMode(saved) ? saved : 'warm-orange'
   })(),
   fontFamily: (safeLocalStorage.getItem('ai-office-font') as AgentStore['fontFamily']) ?? 'system',
   fontSize: (safeLocalStorage.getItem('ai-office-font-size') as AgentStore['fontSize']) ?? 'medium',

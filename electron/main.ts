@@ -151,7 +151,8 @@ function startServer(keys: ApiKeys): void {
       ELECTRON_SERVE: 'true',
       ELECTRON_DIST_PATH: distPath,
       PORT: String(ELECTRON_PORT),
-      // 접속 비밀번호 — 빌드 타임에 .env.electron에서 주입됨
+      // 접속 이메일·비밀번호 — 빌드 타임에 .env.electron에서 주입됨
+      APP_EMAIL: process.env.APP_EMAIL ?? '',
       APP_PASSWORD: process.env.APP_PASSWORD ?? ''
     },
     cwd: userData,

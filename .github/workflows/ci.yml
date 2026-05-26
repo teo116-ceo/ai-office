@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    name: Typecheck & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck (app)
+        run: npx tsc --noEmit
+
+      - name: Typecheck (server)
+        run: npx tsc -p tsconfig.server.json --noEmit
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Format check
+        run: npm run format:check
+
+      - name: Run tests
+        run: npm test
+
+      - name: Coverage report
+        run: node --import tsx --import ./tests/setup.ts --experimental-test-coverage --test tests/taskTitle.test.ts tests/continuationService.test.ts tests/serverBudget.test.ts tests/taskRouting.test.ts tests/webhookValidation.test.ts tests/approvalPolicy.test.ts tests/rateLimiter.test.ts tests/llmUtils.test.ts tests/memoryService.test.ts
+        continue-on-error: true
