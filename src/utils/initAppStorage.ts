@@ -19,6 +19,8 @@ export function initAppStorage(): void {
   // 사용량 데이터는 신규 설치 또는 버전 업데이트 모두 초기화
   // (React 렌더링 전 동기 처리 — useEffect에서 하면 Zustand 복원 후라 덮어쓰기 안 됨)
   if (window.electronAPI?.isFreshVersion) {
+    // 버전 업데이트 시 테마 초기화 → 새 기본값(warm-orange) 적용
+    localStorage.removeItem('ai-office-theme')
     try {
       const raw = localStorage.getItem('ai-office-store')
       if (raw) {
